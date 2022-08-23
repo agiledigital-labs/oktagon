@@ -1,0 +1,88 @@
+{
+  "name": "oktagon",
+  "version": "1.0.0",
+  "description": "Seed project to create interactive cli tools",
+  "main": "index.js",
+  "private": "true",
+  "author": "Sam Murphy <stmurphy@agiledigital.com.au> (https://agiledigital.com.au)",
+  "license": "MIT",
+  "scripts": {
+    "build": "NODE_ENV=production rollup -c --environment BUILD:production",
+    "lint": "eslint src --ext .ts,.tsx",
+    "start": "NODE_ENV=development rollup -c",
+    "watch": "npm run start -- -w",
+    "type-coverage": "type-coverage",
+    "test": "jest",
+    "mutation-test": "stryker run"
+  },
+  "dependencies": {
+    "@okta/okta-auth-js": "^6.7.5",
+    "@okta/okta-sdk-nodejs": "^6.5.0",
+    "chalk-table": "^1.0.2",
+    "clear": "^0.1.0",
+    "clui": "^0.3.6",
+    "colors": "^1.4.0",
+    "inquirer": "^8.0.0",
+    "yargs": "^16.2.0"
+  },
+  "devDependencies": {
+    "@stryker-mutator/core": "^5.2.1",
+    "@stryker-mutator/jest-runner": "^5.2.1",
+    "@stryker-mutator/typescript-checker": "^5.2.1",
+    "@types/clear": "^0.1.1",
+    "@types/clui": "^0.3.0",
+    "@types/jest": "^26.0.24",
+    "@types/node": "^14.14.37",
+    "@types/yargs": "^16.0.1",
+    "@typescript-eslint/eslint-plugin": "^4.22.0",
+    "@typescript-eslint/parser": "^4.22.0",
+    "eslint": "^7.24.0",
+    "eslint-config-prettier": "^8.2.0",
+    "eslint-config-typed-fp": "^1.4.1",
+    "eslint-plugin-functional": "^3.2.1",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-jest": "^24.3.6",
+    "eslint-plugin-jsdoc": "^32.3.0",
+    "eslint-plugin-prettier": "^3.3.1",
+    "eslint-plugin-sonarjs": "^0.9.1",
+    "eslint-plugin-total-functions": "^4.7.2",
+    "eslint-plugin-unused-imports": "^1.1.1",
+    "jest": "^27.0.6",
+    "prettier": "^2.2.1",
+    "rollup": "^2.45.2",
+    "rollup-plugin-cleanup": "^3.2.1",
+    "rollup-plugin-delete": "^2.0.0",
+    "rollup-plugin-typescript2": "^0.30.0",
+    "ts-jest": "^27.0.3",
+    "tsconfig-paths-webpack-plugin": "^3.5.1",
+    "type-coverage": "^2.18.0",
+    "typescript": "^4.2.4"
+  },
+  "typeCoverage": {
+    "atLeast": 100,
+    "ignoreCatch": false,
+    "strict": true,
+    "detail": true
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "collectCoverage": true,
+    "coverageThreshold": {
+      "global": {
+        "branches": 100,
+        "functions": 100,
+        "lines": 100,
+        "statements": 100
+      }
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agiledigital-labs/oktagon.git"
+  },
+  "bugs": {
+    "url": "https://github.com/agiledigital-labs/oktagon/issues"
+  },
+  "homepage": "https://github.com/agiledigital-labs/oktagon#readme"
+}
