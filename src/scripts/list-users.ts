@@ -43,15 +43,15 @@ async function getUsers(clientId: string, privateKey: string): Promise<user[]> {
     .listUsers()
     .each(
       (user: {
-        profile: { login: unknown; email: unknown; firstName: unknown };
-        status: unknown;
+        profile: { login: string; email: string; firstName: string };
+        status: string;
       }) => {
         // eslint-disable-next-line functional/immutable-data
         users.push({
-          login: String(user.profile.login),
-          email: String(user.profile.email),
-          firstName: String(user.profile.firstName),
-          status: String(user.status),
+          login: user.profile.login,
+          email: user.profile.email,
+          firstName: user.profile.firstName,
+          status: user.status,
         });
       }
     );
