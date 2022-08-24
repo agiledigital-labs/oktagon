@@ -105,7 +105,7 @@ export default ({ command }: RootCommand): Argv<unknown> =>
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
         const table = chalkTable(options, clients);
         console.info(table);
-      // eslint-disable-next-line @typescript-eslint/no-implicit-any-catch, @typescript-eslint/no-explicit-any
+        // eslint-disable-next-line @typescript-eslint/no-implicit-any-catch, @typescript-eslint/no-explicit-any
       } catch (error: any) {
         // eslint-disable-next-line functional/no-conditional-statement
         if (error instanceof Error) {
