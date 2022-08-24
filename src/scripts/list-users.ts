@@ -99,43 +99,53 @@ export default ({ command }: RootCommand): Argv<unknown> =>
           'Both arguments are required to sign into Okta'
         );
     },
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    async (args: { clientId: string; privateKey: string; orgUrl: string }) => {
-      // eslint-disable-next-line functional/no-try-statement
-      try {
-        const clients: readonly User[] = await getUsers(
-          args.clientId,
-          args.privateKey,
-          args.orgUrl
-        );
-
-        const options = {
-          leftPad: 1,
-          columns: [
-            { field: 'login', name: chalk.green('Login') },
-            { field: 'email', name: chalk.green('Email') },
-            { field: 'name', name: chalk.white('Name') },
-            { field: 'status', name: chalk.yellow('Status') },
-          ],
-        };
-
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-        const table = chalkTable(options, clients);
-        console.info(table);
-      } catch (error: unknown) {
-        // eslint-disable-next-line functional/no-conditional-statement
-        if (error instanceof Error) {
-          console.error(
-            `\n${chalk.red.bold(
-              'ERROR'
-            )} encountered while performing instruction: ${chalk.green(
-              error.message
-            )}`
-          );
-          console.error(
-            'This is most likely caused by an incorrect private key or client id value inputted either in argument or in environment.\n'
-          );
-        }
-      }
+    (args: { clientId: string; privateKey: string; orgUrl: string }) => {
+      void listUsers(args);
     }
   );
+
+const listUsers = async (args: {
+  clientId: string;
+  privateKey: string;
+  orgUrl: string;
+}): Promise<void> => {
+  // A try statement is needed for error handling
+  // eslint-disable-next-line functional/no-try-statement
+  try {
+    const clients: readonly User[] = await getUsers(
+      args.clientId,
+      args.privateKey,
+      args.orgUrl
+    );
+
+    const options = {
+      leftPad: 1,
+      columns: [
+        { field: 'login', name: chalk.green('Login') },
+        { field: 'email', name: chalk.green('Email') },
+        { field: 'name', name: chalk.white('Name') },
+        { field: 'status', name: chalk.yellow('Status') },
+      ],
+    };
+
+    // This is required due to a 'require' statement for chalkTable
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+    const table = chalkTable(options, clients);
+    console.info(table);
+  } catch (error: unknown) {
+    // There must be a conditional in here to check if error is of the correct type
+    // eslint-disable-next-line functional/no-conditional-statement
+    if (error instanceof Error) {
+      console.error(
+        `\n${chalk.red.bold(
+          'ERROR'
+        )} encountered while performing instruction: ${chalk.green(
+          error.message
+        )}`
+      );
+      console.error(
+        'This is most likely caused by an incorrect private key or client id value inputted either in argument or in environment.\n'
+      );
+    }
+  }
+};
