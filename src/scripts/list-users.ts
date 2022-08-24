@@ -5,9 +5,7 @@ import { RootCommand } from '..';
 import * as okta from '@okta/okta-sdk-nodejs';
 
 import chalk from 'chalk';
-// chalkTable does not have a tyoe declaration, so it has to be formatted as a require statement
-// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-var-requires
-const chalkTable = require('chalk-table');
+import { table } from 'table';
 
 /**
  * Subset of User information provided by Okta. See okta.User for further information on it's derived type.
@@ -47,8 +45,7 @@ type User = {
 async function getUsers(
   clientId: string,
   privateKey: string,
-  organisationUrl: string,
-  truncate = true
+  organisationUrl: string
 ): Promise<User[]> {
   const client = new okta.Client({
     orgUrl: organisationUrl,
@@ -58,24 +55,20 @@ async function getUsers(
     privateKey: privateKey,
   });
 
-  const users: User[] = [];
+  const users: User[] = [
+    { login: 'Login', email: 'Email', name: 'Name', status: 'Status' },
+  ];
 
   // We need to populate users with all of the client data so it can be
   // returned. Okta's listUsers() function returns a custon collection that
   // does not allow for any form of mapping, so array mutation is needed.
   await client.listUsers().each((user: okta.User) => {
-    const truncator = (str: string, len = 30): string => {
-      return truncate && str.length >= len - 3
-        ? str.substring(0, len - 2) + '...'
-        : str;
-    };
-
     // eslint-disable-next-line functional/immutable-data
     users.push({
-      login: truncator(user.profile.login),
-      email: truncator(user.profile.email),
-      name: truncator(user.profile.firstName + ' ' + user.profile.lastName),
-      status: truncator(String(user.status)),
+      login: user.profile.login,
+      email: user.profile.email,
+      name: user.profile.firstName + ' ' + user.profile.lastName,
+      status: String(user.status),
     });
   });
 
@@ -105,12 +98,6 @@ export default ({ command }: RootCommand): Argv<unknown> =>
           alias: ['org-url', 'ou'],
           describe: 'Okta URL for Organisation',
         })
-        .option('long', {
-          alias: 'no-truncation',
-          describe:
-            'Provide user information that is not truncated (may cause readability issues if on a small window)',
-        })
-        .boolean('long')
         .help()
         .demandOption(
           ['client-id', 'private-key', 'org-url'],
@@ -131,32 +118,34 @@ const listUsers = async (args: {
   clientId: string;
   privateKey: string;
   organisationUrl: string;
-  long: boolean;
 }): Promise<void> => {
   // A try statement is needed for error handling
   // eslint-disable-next-line functional/no-try-statement
   try {
-    const clients: readonly User[] = await getUsers(
+    const users: readonly User[] = await getUsers(
       args.clientId,
       args.privateKey,
-      args.organisationUrl,
-      !args.long
+      args.organisationUrl
     );
 
-    const options = {
-      leftPad: 1,
+    const config = {
       columns: [
-        { field: 'login', name: chalk.green('Login') },
-        { field: 'email', name: chalk.green('Email') },
-        { field: 'name', name: chalk.white('Name') },
-        { field: 'status', name: chalk.yellow('Status') },
+        {
+          width: (process.stdout.columns / 4 - 4) | 0,
+          wrapWord: true,
+        },
       ],
     };
 
     // This is required due to a 'require' statement for chalkTable
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-    const table = chalkTable(options, clients);
-    console.info(table);
+    const outTable = table(
+      users.map((user: User) => {
+        return Object.values(user);
+      }),
+      config
+    );
+    console.info(outTable);
   } catch (error: unknown) {
     // There must be a conditional in here to check if error is of the correct type
     const errMsg =

@@ -19,6 +19,7 @@
     "@okta/okta-auth-js": "^6.7.5",
     "@okta/okta-sdk-nodejs": "^6.5.0",
     "chalk-table": "^1.0.2",
+    "table": "^6.8.0",
     "yargs": "^16.2.0"
   },
   "devDependencies": {
