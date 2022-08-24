@@ -1,10 +1,3 @@
-/* eslint-disable functional/no-conditional-statement */
-/* eslint-disable @typescript-eslint/no-implicit-any-catch */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-misused-promises */
-/* eslint-disable functional/no-try-statement */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable functional/immutable-data */
 /* eslint-disable functional/prefer-readonly-type */
 /* eslint-disable functional/no-expression-statement */
 import { Argv } from 'yargs';
@@ -15,7 +8,7 @@ import chalk from 'chalk';
 // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-assignment
 const chalkTable = require('chalk-table');
 
-// Subset of user information provided by Okta
+// Subset of User information provided by Okta
 type user = {
   readonly login: string;
   readonly email: string;
@@ -23,7 +16,15 @@ type user = {
   readonly status: string;
 };
 
-// Get the clients given a set of arguments
+/**
+ * Get a list of users given a set of arguments relating to the client's information.
+ *
+ * @async
+ * @param {string} clientId The provided clientId string.
+ * @param {string} privateKey The provided privateKey, formatted as a string, parseable as a JWT JSON Object.
+ * @returns {user[]} An array of user data formatted using the predefined subset data type
+ *
+ */
 async function getUsers(clientId: string, privateKey: string): Promise<user[]> {
   const client = new okta.Client({
     orgUrl: 'https://live-nonprod-esgtech-co.oktapreview.com/',
@@ -35,7 +36,9 @@ async function getUsers(clientId: string, privateKey: string): Promise<user[]> {
 
   const users: user[] = [];
 
-  // We need to populate users with all of the client data so it can be returned
+  // We need to populate users with all of the client data so it can be
+  // returned. Okta's listUsers() function returns a custon collection that
+  // does not allow for any form of mapping, so array mutation is needed.
   await client
     .listUsers()
     .each(
@@ -43,6 +46,7 @@ async function getUsers(clientId: string, privateKey: string): Promise<user[]> {
         profile: { login: unknown; email: unknown; firstName: unknown };
         status: unknown;
       }) => {
+        // eslint-disable-next-line functional/immutable-data
         users.push({
           login: String(user.profile.login),
           email: String(user.profile.email),
@@ -79,9 +83,14 @@ export default ({ command }: RootCommand): Argv<unknown> =>
           'Both arguments are required to sign into Okta'
         );
     },
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     async (args: { clientId: string; privateKey: string }) => {
+      // eslint-disable-next-line functional/no-try-statement
       try {
-        const clients = await getUsers(args.clientId, args.privateKey);
+        const clients: readonly user[] = await getUsers(
+          args.clientId,
+          args.privateKey
+        );
 
         const options = {
           leftPad: 1,
@@ -96,7 +105,9 @@ export default ({ command }: RootCommand): Argv<unknown> =>
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
         const table = chalkTable(options, clients);
         console.info(table);
+      // eslint-disable-next-line @typescript-eslint/no-implicit-any-catch, @typescript-eslint/no-explicit-any
       } catch (error: any) {
+        // eslint-disable-next-line functional/no-conditional-statement
         if (error instanceof Error) {
           console.error(
             '\n' +
