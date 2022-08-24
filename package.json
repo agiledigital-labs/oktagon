@@ -1,7 +1,7 @@
 {
   "name": "oktagon",
   "version": "1.0.0",
-  "description": "Seed project to create interactive cli tools",
+  "description": "Interactive CLI tool for handling Okta user information.",
   "main": "index.js",
   "private": "true",
   "author": "Sam Murphy <stmurphy@agiledigital.com.au> (https://agiledigital.com.au)",
