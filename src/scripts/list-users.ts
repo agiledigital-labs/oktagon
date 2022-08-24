@@ -11,6 +11,8 @@ const chalkTable = require('chalk-table');
 
 /**
  * Subset of User information provided by Okta. See okta.User for further information on it's derived type.
+ *
+ * @see https://developer.okta.com/docs/reference/api/users/
  */
 type User = {
   /**
@@ -37,7 +39,7 @@ type User = {
  * @async
  * @param clientId The provided clientId string.
  * @param privateKey The provided privateKey, formatted as a string, parseable as a JWT JSON Object.
- * @param orgUrl The provided organisation URL string
+ * @param organisationUrl The provided organisation URL string
  * @param truncate Whether or not to truncate long strings
  * @returns An array of user data formatted using the predefined subset data type
  *
@@ -45,11 +47,11 @@ type User = {
 async function getUsers(
   clientId: string,
   privateKey: string,
-  orgUrl: string,
+  organisationUrl: string,
   truncate = true
 ): Promise<User[]> {
   const client = new okta.Client({
-    orgUrl: orgUrl,
+    orgUrl: organisationUrl,
     authorizationMode: 'PrivateKey',
     clientId: clientId,
     scopes: ['okta.users.read'],
@@ -83,6 +85,7 @@ async function getUsers(
 export default ({ command }: RootCommand): Argv<unknown> =>
   command(
     'list-users',
+    // eslint-disable-next-line quotes
     "Provides a list of all users' logins, emails, display names, and statuses. Allows for environment variables under the name OKTAGON_[arg].",
     (yargs) => {
       yargs
@@ -97,10 +100,10 @@ export default ({ command }: RootCommand): Argv<unknown> =>
           alias: 'pk',
           describe: 'Okta private key as string form of JSON',
         })
-        .option('org-url', {
+        .option('organisation-url', {
           type: 'string',
-          alias: 'ou',
-          describe: 'Okta preview URL for Organisation',
+          alias: ['org-url', 'ou'],
+          describe: 'Okta URL for Organisation',
         })
         .option('long', {
           alias: 'no-truncation',
@@ -117,7 +120,7 @@ export default ({ command }: RootCommand): Argv<unknown> =>
     (args: {
       clientId: string;
       privateKey: string;
-      orgUrl: string;
+      organisationUrl: string;
       long: boolean;
     }) => {
       void listUsers(args);
@@ -127,7 +130,7 @@ export default ({ command }: RootCommand): Argv<unknown> =>
 const listUsers = async (args: {
   clientId: string;
   privateKey: string;
-  orgUrl: string;
+  organisationUrl: string;
   long: boolean;
 }): Promise<void> => {
   // A try statement is needed for error handling
@@ -136,7 +139,7 @@ const listUsers = async (args: {
     const clients: readonly User[] = await getUsers(
       args.clientId,
       args.privateKey,
-      args.orgUrl,
+      args.organisationUrl,
       !args.long
     );
 
@@ -156,18 +159,15 @@ const listUsers = async (args: {
     console.info(table);
   } catch (error: unknown) {
     // There must be a conditional in here to check if error is of the correct type
-    // eslint-disable-next-line functional/no-conditional-statement
-    if (error instanceof Error) {
-      console.error(
-        `\n${chalk.red.bold(
-          'ERROR'
-        )} encountered while performing instruction: ${chalk.green(
-          error.message
-        )}`
-      );
-      console.error(
-        'This is most likely caused by an incorrect private key or client id value inputted either in argument or in environment.\n'
-      );
-    }
+    const errMsg =
+      error instanceof Error
+        ? `\n${chalk.red.bold('ERROR')} encountered while listing users from [${
+            args.organisationUrl
+          }]: [${chalk.green(
+            error.message
+          )}]\nThis is most likely caused by an incorrect private key or client id value inputted either in argument or in environment.\n`
+        : 'No errors!';
+
+    console.error(errMsg);
   }
 };

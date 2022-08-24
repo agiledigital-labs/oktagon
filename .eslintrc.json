@@ -30,11 +30,11 @@
     "total-functions"
   ],
   "rules": {
-    "prettier/prettier": "warn",
+    "prettier/prettier": "error",
     "import/no-cycle": "error",
     "no-unused-vars": "off",
     "linebreak-style": ["error", "unix"],
-    "quotes": "off",
+    "quotes": ["error", "single"],
     "semi": ["error", "always"],
     "no-console": ["error", { "allow": ["info", "warn", "error"] }],
     "unused-imports/no-unused-imports-ts": "error",
