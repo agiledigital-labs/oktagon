@@ -37,13 +37,16 @@ type User = {
  * @async
  * @param clientId The provided clientId string.
  * @param privateKey The provided privateKey, formatted as a string, parseable as a JWT JSON Object.
+ * @param orgUrl The provided organisation URL string
+ * @param truncate Whether or not to truncate long strings
  * @returns An array of user data formatted using the predefined subset data type
  *
  */
 async function getUsers(
   clientId: string,
   privateKey: string,
-  orgUrl: string
+  orgUrl: string,
+  truncate = true
 ): Promise<User[]> {
   const client = new okta.Client({
     orgUrl: orgUrl,
@@ -59,12 +62,18 @@ async function getUsers(
   // returned. Okta's listUsers() function returns a custon collection that
   // does not allow for any form of mapping, so array mutation is needed.
   await client.listUsers().each((user: okta.User) => {
+    const truncator = (str: string, len = 30): string => {
+      return truncate && str.length >= len - 3
+        ? str.substring(0, len - 2) + '...'
+        : str;
+    };
+
     // eslint-disable-next-line functional/immutable-data
     users.push({
-      login: user.profile.login,
-      email: user.profile.email,
-      name: user.profile.firstName,
-      status: String(user.status),
+      login: truncator(user.profile.login),
+      email: truncator(user.profile.email),
+      name: truncator(user.profile.firstName + ' ' + user.profile.lastName),
+      status: truncator(String(user.status)),
     });
   });
 
@@ -93,13 +102,24 @@ export default ({ command }: RootCommand): Argv<unknown> =>
           alias: 'ou',
           describe: 'Okta preview URL for Organisation',
         })
+        .option('long', {
+          alias: 'no-truncation',
+          describe:
+            'Provide user information that is not truncated (may cause readability issues if on a small window)',
+        })
+        .boolean('long')
         .help()
         .demandOption(
-          ['client-id', 'private-key'],
-          'Both arguments are required to sign into Okta'
+          ['client-id', 'private-key', 'org-url'],
+          'Three arguments are required to sign into Okta'
         );
     },
-    (args: { clientId: string; privateKey: string; orgUrl: string }) => {
+    (args: {
+      clientId: string;
+      privateKey: string;
+      orgUrl: string;
+      long: boolean;
+    }) => {
       void listUsers(args);
     }
   );
@@ -108,6 +128,7 @@ const listUsers = async (args: {
   clientId: string;
   privateKey: string;
   orgUrl: string;
+  long: boolean;
 }): Promise<void> => {
   // A try statement is needed for error handling
   // eslint-disable-next-line functional/no-try-statement
@@ -115,7 +136,8 @@ const listUsers = async (args: {
     const clients: readonly User[] = await getUsers(
       args.clientId,
       args.privateKey,
-      args.orgUrl
+      args.orgUrl,
+      !args.long
     );
 
     const options = {
