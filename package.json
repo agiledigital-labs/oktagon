@@ -4,7 +4,7 @@
   "description": "Interactive CLI tool for handling Okta user information.",
   "main": "index.js",
   "private": "true",
-  "author": "Sam Murphy <stmurphy@agiledigital.com.au> (https://agiledigital.com.au)",
+  "author": "Agile Digital <hello@agiledigital.com.au> (https://agiledigital.com.au)",
   "license": "MIT",
   "scripts": {
     "build": "NODE_ENV=production rollup -c --environment BUILD:production",
@@ -19,10 +19,6 @@
     "@okta/okta-auth-js": "^6.7.5",
     "@okta/okta-sdk-nodejs": "^6.5.0",
     "chalk-table": "^1.0.2",
-    "clear": "^0.1.0",
-    "clui": "^0.3.6",
-    "colors": "^1.4.0",
-    "inquirer": "^8.0.0",
     "yargs": "^16.2.0"
   },
   "devDependencies": {
@@ -56,7 +52,7 @@
     "ts-jest": "^27.0.3",
     "tsconfig-paths-webpack-plugin": "^3.5.1",
     "type-coverage": "^2.18.0",
-    "typescript": "^4.2.4"
+    "typescript": "^4.7.4"
   },
   "typeCoverage": {
     "atLeast": 100,

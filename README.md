@@ -2,7 +2,7 @@
 
 This is a project to aid in the interaction with Okta.
 
-### Node useage
+### Node usage
 
 After compilation using the `npm run build` command, run all commands using `./dist/oktagon <Command name>`.
 
