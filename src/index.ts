@@ -14,6 +14,7 @@ export type RootCommand = typeof rootCommand;
 // Only finds scripts in top level
 const directorySearch = (localDirectory: string): readonly string[] =>
   readdirSync(join(__dirname, localDirectory), { withFileTypes: true })
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
     .map(({ name }) => name)
     .filter((value) => value.endsWith('.js'))
     // Weirdness with string concat as path resolves the the ./ and drops it
@@ -51,4 +52,4 @@ const rootCommand = yargs
 // eslint-disable-next-line @typescript-eslint/no-unsafe-call
 directorySearch('scripts').map((path) => require(path)(rootCommand));
 
-rootCommand.demandCommand().strict().help().argv;
+void rootCommand.demandCommand().strict().help().argv;

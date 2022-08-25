@@ -5,8 +5,8 @@ import del from 'rollup-plugin-delete';
 import cleanup from 'rollup-plugin-cleanup';
 import { spawnSync } from 'child_process';
 
-
 const cliConfig = require('./config/cliConfig.json');
+const typeScriptFileMatch = new RegExp(/^[A-z0-9/-]+\.ts$/);
 
 /**
  * Deep searches for files within a directory
@@ -40,7 +40,9 @@ const deepDirectorySearch = (fileExtension, localDirectory) => {
       ],
       []
     )
-    .filter((value) => value.endsWith('.ts'));
+    .filter((value) => {
+      return typeScriptFileMatch.test(value);
+    });
 };
 
 /**
@@ -62,7 +64,7 @@ const plugins = [
 const scriptConfiguration = (filePath) => ({
   input: filePath,
   output: {
-    file: `dist${filePath.replace('src', '').replace('.ts', '.js')}`,
+    file: `dist${filePath.replace('src', '').replace(/\.ts$/, '.js')}`,
     format: 'cjs',
     exports: 'auto',
   },
@@ -79,10 +81,10 @@ export default [
     },
     plugins: [
       ...plugins,
-      // add execute permission to the executable
       {
-        name: 'writeBundle',
+        name: 'closeBundle',
         writeBundle: () => {
+          console.info(`make ${cliConfig.name} executable`);
           spawnSync(`chmod`, ['u+x', `dist/${cliConfig.name}`]);
         }
       },
