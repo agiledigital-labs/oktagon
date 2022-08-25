@@ -9,7 +9,6 @@ import { table } from 'table';
 
 /**
  * Subset of User information provided by Okta. See okta.User for further information on it's derived type.
- *
  * @see https://developer.okta.com/docs/reference/api/users/
  */
 type User = {
@@ -33,12 +32,10 @@ type User = {
 
 /**
  * Get a list of users given a set of arguments relating to the client's information.
- *
  * @async
  * @param clientId The provided clientId string.
  * @param privateKey The provided privateKey, formatted as a string, parseable as a JWT JSON Object.
  * @param organisationUrl The provided organisation URL string
- * @param truncate Whether or not to truncate long strings
  * @returns An array of user data formatted using the predefined subset data type
  *
  */
@@ -67,13 +64,84 @@ async function getUsers(
     users.push({
       login: user.profile.login,
       email: user.profile.email,
-      name: user.profile.firstName + ' ' + user.profile.lastName,
+      name: `${user.profile.firstName} ${user.profile.lastName}`,
       status: String(user.status),
     });
   });
 
   return users;
 }
+
+/**
+ * Forms a string table detailing the user information.
+ * @param users Array containing all listable users of type User
+ * @returns String formatted as an output table
+ */
+function tableUsers(users: readonly User[] | User[]): string {
+  const config = {
+    columns: [
+      {
+        width: (process.stdout.columns / 4 - 4) | 0,
+        wrapWord: true,
+      },
+    ],
+  };
+
+  return table(
+    users.map((user: User) => {
+      return Object.values(user);
+    }),
+    config
+  );
+}
+
+/**
+ * Generates an error message given the throwable and the provided organisation URL.
+ * @param error The thrown object that has been caught
+ * @param organisationUrl The organisation URL submitted via argument
+ * @returns Text containing the error message in question
+ */
+function generateErrorMessage(
+  error: unknown | Error,
+  organisationUrl = 'NO URL GIVEN'
+): string {
+  return error instanceof Error
+    ? `\n${chalk.red.bold(
+        'ERROR'
+      )} encountered while listing users from [${chalk.blue.underline(
+        organisationUrl
+      )}]: [${chalk.green(
+        error.message
+      )}]\n\nThis is most likely caused by incorrect credentials inputted either in argument or in environment.\n`
+    : `Some sort of issue was encountered while executing the command: [${String(
+        error
+      )}]`;
+}
+
+/**
+ * Produce a set of error/task messages involving listing the users from Okta.
+ * @async
+ * @param args The provided yargs argument object.
+ *
+ */
+const listUsers = async (args: {
+  clientId: string;
+  privateKey: string;
+  organisationUrl: string;
+}): Promise<[string, boolean]> => {
+  // A try statement is needed for error handling
+  // eslint-disable-next-line functional/no-try-statement
+  try {
+    return [
+      tableUsers(
+        await getUsers(args.clientId, args.privateKey, args.organisationUrl)
+      ),
+      false,
+    ];
+  } catch (error: unknown) {
+    return [generateErrorMessage(error, args.organisationUrl), true];
+  }
+};
 
 export default ({ command }: RootCommand): Argv<unknown> =>
   command(
@@ -89,70 +157,16 @@ export default ({ command }: RootCommand): Argv<unknown> =>
       organisationUrl: string;
       long: boolean;
     }) => {
-      void listUsers(args);
+      const printMessageToConsole = async (args: {
+        clientId: string;
+        privateKey: string;
+        organisationUrl: string;
+        long: boolean;
+      }): Promise<void> => {
+        const [message, errFlag] = await listUsers(args);
+        errFlag ? console.info(message) : console.error(message);
+      };
+
+      void printMessageToConsole(args);
     }
   );
-
-const listUsers = async (args: {
-  clientId: string;
-  privateKey: string;
-  organisationUrl: string;
-}): Promise<boolean> => {
-  // A try statement is needed for error handling
-  // eslint-disable-next-line functional/no-try-statement
-  try {
-    const users: readonly User[] = await getUsers(
-      args.clientId,
-      args.privateKey,
-      args.organisationUrl
-    );
-
-    const config = {
-      columns: [
-        {
-          width: (process.stdout.columns / 4 - 4) | 0,
-          wrapWord: true,
-        },
-      ],
-    };
-
-    // This is required due to a 'require' statement for chalkTable
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-    const outTable = table(
-      users.map((user: User) => {
-        return Object.values(user);
-      }),
-      config
-    );
-    console.info(outTable);
-  } catch (error: unknown) {
-    // There must be a conditional in here to check if error is of the correct type
-    const errMsg =
-      error instanceof Error
-        ? `\n${chalk.red.bold(
-            'ERROR'
-          )} encountered while listing users from [${chalk.blue.underline(
-            args.organisationUrl
-          )}]: [${chalk.green(
-            error.message
-          )}]\n\nThis is most likely caused by an incorrect private key or client id value inputted either in argument or in environment.\n`
-        : `Some sort of issue was encountered while executing the command: [${String(
-            error
-          )}]`;
-
-    console.error(errMsg);
-    /*
-    // eslint-disable-next-line functional/no-conditional-statement
-    if (errMsg === '') {
-      // eslint-disable-next-line functional/no-throw-statement
-      throw error;
-    } else {
-      // eslint-disable-next-line functional/no-throw-statement
-      throw Error('See above code');
-    }
-    */
-    return false;
-  }
-
-  return true;
-};

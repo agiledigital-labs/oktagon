@@ -30,22 +30,21 @@ const rootCommand = yargs
     type: 'string',
     alias: 'cid',
     describe: 'Okta client ID',
+    demandOption: true,
   })
   .option('private-key', {
     type: 'string',
     alias: 'pk',
     describe: 'Okta private key as string form of JSON',
+    demandOption: true,
   })
   .option('organisation-url', {
     type: 'string',
     alias: ['org-url', 'ou'],
     describe: 'Okta URL for Organisation',
+    demandOption: true,
   })
-  .help()
-  .demandOption(
-    ['client-id', 'private-key', 'org-url'],
-    'Three arguments are required to sign into Okta'
-  );
+  .help();
 
 // Allows to configure handlers (any .js file in the scripts directory) with arguments (rootCommand in this case) at runtime.
 // This means the end users of this tool won't have to touch this file, they just have to add their scripts in the scripts folder.
