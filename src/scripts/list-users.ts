@@ -165,6 +165,7 @@ export default ({ command }: RootCommand): Argv<unknown> =>
       }): Promise<void> => {
         const [message, errFlag] = await listUsers(args);
         errFlag ? console.info(message) : console.error(message);
+        process.exit(Number(errFlag));
       };
 
       void printMessageToConsole(args);
