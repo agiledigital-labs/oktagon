@@ -81,28 +81,7 @@ export default ({ command }: RootCommand): Argv<unknown> =>
     // eslint-disable-next-line quotes
     "Provides a list of all users' logins, emails, display names, and statuses. Allows for environment variables under the name OKTAGON_[arg].",
     (yargs) => {
-      yargs
-        .env('OKTAGON')
-        .option('client-id', {
-          type: 'string',
-          alias: 'cid',
-          describe: 'Okta client ID',
-        })
-        .option('private-key', {
-          type: 'string',
-          alias: 'pk',
-          describe: 'Okta private key as string form of JSON',
-        })
-        .option('organisation-url', {
-          type: 'string',
-          alias: ['org-url', 'ou'],
-          describe: 'Okta URL for Organisation',
-        })
-        .help()
-        .demandOption(
-          ['client-id', 'private-key', 'org-url'],
-          'Three arguments are required to sign into Okta'
-        );
+      yargs;
     },
     (args: {
       clientId: string;
@@ -118,7 +97,7 @@ const listUsers = async (args: {
   clientId: string;
   privateKey: string;
   organisationUrl: string;
-}): Promise<void> => {
+}): Promise<boolean> => {
   // A try statement is needed for error handling
   // eslint-disable-next-line functional/no-try-statement
   try {
@@ -150,13 +129,30 @@ const listUsers = async (args: {
     // There must be a conditional in here to check if error is of the correct type
     const errMsg =
       error instanceof Error
-        ? `\n${chalk.red.bold('ERROR')} encountered while listing users from [${
+        ? `\n${chalk.red.bold(
+            'ERROR'
+          )} encountered while listing users from [${chalk.blue.underline(
             args.organisationUrl
-          }]: [${chalk.green(
+          )}]: [${chalk.green(
             error.message
-          )}]\nThis is most likely caused by an incorrect private key or client id value inputted either in argument or in environment.\n`
-        : 'No errors!';
+          )}]\n\nThis is most likely caused by an incorrect private key or client id value inputted either in argument or in environment.\n`
+        : `Some sort of issue was encountered while executing the command: [${String(
+            error
+          )}]`;
 
     console.error(errMsg);
+    /*
+    // eslint-disable-next-line functional/no-conditional-statement
+    if (errMsg === '') {
+      // eslint-disable-next-line functional/no-throw-statement
+      throw error;
+    } else {
+      // eslint-disable-next-line functional/no-throw-statement
+      throw Error('See above code');
+    }
+    */
+    return false;
   }
+
+  return true;
 };

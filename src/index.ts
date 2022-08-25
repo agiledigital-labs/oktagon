@@ -24,7 +24,28 @@ const directorySearch = (localDirectory: string): readonly string[] =>
  * Add global arguments here using the .option function.
  * E.g. const rootCommand = yargs.option('example', {type: 'string'});
  */
-const rootCommand = yargs;
+const rootCommand = yargs
+  .env('OKTAGON')
+  .option('client-id', {
+    type: 'string',
+    alias: 'cid',
+    describe: 'Okta client ID',
+  })
+  .option('private-key', {
+    type: 'string',
+    alias: 'pk',
+    describe: 'Okta private key as string form of JSON',
+  })
+  .option('organisation-url', {
+    type: 'string',
+    alias: ['org-url', 'ou'],
+    describe: 'Okta URL for Organisation',
+  })
+  .help()
+  .demandOption(
+    ['client-id', 'private-key', 'org-url'],
+    'Three arguments are required to sign into Okta'
+  );
 
 // Allows to configure handlers (any .js file in the scripts directory) with arguments (rootCommand in this case) at runtime.
 // This means the end users of this tool won't have to touch this file, they just have to add their scripts in the scripts folder.
