@@ -45,6 +45,10 @@ const rootCommand = yargs
     describe: 'Okta URL for Organisation',
     demandOption: true,
   })
+  .group(
+    ['client-id', 'private-key', 'organisation-url'],
+    'Okta connection settings:'
+  )
   .help();
 
 // Allows to configure handlers (any .js file in the scripts directory) with arguments (rootCommand in this case) at runtime.
