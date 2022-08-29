@@ -10,7 +10,7 @@ import {
   getUser,
 } from './services/user-service';
 
-const deactivateUser = async (
+const deleteUser = async (
   oktaConfiguration: OktaConfiguration,
   userId: string
 ): Promise<User> => {
@@ -19,28 +19,34 @@ const deactivateUser = async (
   const maybeOktaUser = await getUser(userId, client);
 
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-  const deactivate = async (oktaUser: OktaUser) => {
+  const performDelete = async (oktaUser: OktaUser) => {
     // eslint-disable-next-line functional/no-expression-statement
-    await oktaUser.deactivate({
+    await oktaUser.delete({
       sendEmail: false,
     });
 
-    const deactivatedOktaUser = await client.getUser(userId);
+    return oktaUserAsUser(oktaUser);
+  };
 
-    return oktaUserAsUser(deactivatedOktaUser);
+  // eslint-disable-next-line functional/functional-parameters
+  const throwOnNotDeprovisioned = () => {
+    // eslint-disable-next-line functional/no-throw-statement
+    throw new Error(
+      `User [${userId}] has not been deprovisioned. Deprovision before deleting.`
+    );
   };
 
   // eslint-disable-next-line functional/functional-parameters
   const throwOnMissing = () => {
     // eslint-disable-next-line functional/no-throw-statement
-    throw new Error(`User [${userId}] does not exist. Can not de-activate.`);
+    throw new Error(`User [${userId}] does not exist. Can not delete.`);
   };
 
   return maybeOktaUser === undefined
     ? throwOnMissing()
     : maybeOktaUser.status === UserStatus.DEPROVISIONED
-    ? oktaUserAsUser(maybeOktaUser)
-    : deactivate(maybeOktaUser);
+    ? performDelete(maybeOktaUser)
+    : throwOnNotDeprovisioned();
 };
 
 export default (
@@ -53,13 +59,13 @@ export default (
   readonly userId: string;
 }> =>
   rootCommand.command(
-    'deactivate-user [user-id]',
-    'Deactivates the specified user',
+    'delete-user [user-id]',
+    'Deletes the specified user',
     // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => {
       // eslint-disable-next-line functional/no-expression-statement
       yargs.positional('user-id', {
-        describe: 'a unique identifier for the server',
+        describe: 'the identifier of the user to delete',
         type: 'string',
         demandOption: true,
       });
@@ -72,25 +78,25 @@ export default (
     }) => {
       // eslint-disable-next-line functional/no-try-statement
       try {
-        const user = await deactivateUser(
+        const user = await deleteUser(
           {
             ...args,
           },
           args.userId
         );
         // eslint-disable-next-line functional/no-expression-statement
-        console.info(`De-activated [${user.id}] [${user.email}].`);
+        console.info(`Deleted [${user.id}] [${user.email}].`);
       } catch (error: unknown) {
         // eslint-disable-next-line functional/no-throw-statement
         throw error instanceof Error
           ? new Error(
-              `Failed to deactivate user [${args.userId}] in [${args.organisationUrl}].`,
+              `Failed to delete user [${args.userId}] in [${args.organisationUrl}].`,
               {
                 cause: error,
               }
             )
           : new Error(
-              `Failed to deactivate user [${args.userId}] in [${
+              `Failed to delete user [${args.userId}] in [${
                 args.organisationUrl
               }] because of [${JSON.stringify(error)}].`
             );

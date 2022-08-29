@@ -5,7 +5,7 @@ import { table } from 'table';
 import {
   oktaReadOnlyClient,
   OktaConfiguration,
-  user,
+  oktaUserAsUser,
   User,
 } from './services/user-service';
 
@@ -34,7 +34,7 @@ const fetchUsers = async (
     // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
     .each((oktaUser) => {
       // eslint-disable-next-line functional/immutable-data, functional/no-expression-statement
-      users.push(user(oktaUser));
+      users.push(oktaUserAsUser(oktaUser));
     });
 
   return users;
