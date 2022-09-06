@@ -20,7 +20,7 @@ const createUser = async (
 ): Promise<User> => {
   const client = oktaManageClient(oktaConfiguration);
 
-  const maybeOktaUser = getUser(email, client);
+  const maybeOktaUser = await getUser(email, client);
   const newUser: CreateUserRequestOptions = {
     profile: {
       firstName: firstName,
@@ -41,7 +41,7 @@ const createUser = async (
     );
   };
 
-  return (await maybeOktaUser) === undefined
+  return maybeOktaUser === undefined
     ? oktaUserAsUser(await client.createUser(newUser))
     : throwOnExisting();
 };
