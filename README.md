@@ -61,4 +61,4 @@ Running the following command:
 oktagon create-user --email <Email/Login> --fname <First Name> --lname <Last Name>
 ```
 
-Will create a new user with an active status and no password. The profile information will be set according to the provided arguments. All three arguments are required.
+Will create a new user with an active status and will return confirmation in addition to the new password. The profile information will be set according to the provided arguments. All three arguments are required.

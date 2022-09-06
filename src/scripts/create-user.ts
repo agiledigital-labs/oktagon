@@ -10,22 +10,28 @@ import {
   getUser,
 } from './services/user-service';
 
+import { generatePassword } from './services/password_manager';
+
 const createUser = async (
   oktaConfiguration: OktaConfiguration,
+  password: string,
   email: string,
   firstName = 'Unknown',
   lastName = 'User'
 ): Promise<User> => {
   const client = oktaManageClient(oktaConfiguration);
 
-  const maybeOktaUser = await getUser(email, client);
-
+  const maybeOktaUser = getUser(email, client);
+  // eslint-disable-next-line functional/no-expression-statement
   const newUser: CreateUserRequestOptions = {
     profile: {
       firstName: firstName,
       lastName: lastName,
       email: email,
       login: email,
+    },
+    credentials: {
+      password: { value: password },
     },
   };
 
@@ -37,7 +43,7 @@ const createUser = async (
     );
   };
 
-  return maybeOktaUser === undefined
+  return (await maybeOktaUser) === undefined
     ? oktaUserAsUser(await client.createUser(newUser))
     : throwOnExisting();
 };
@@ -93,17 +99,20 @@ export default (
     }) => {
       // eslint-disable-next-line functional/no-try-statement
       try {
+        const password = generatePassword(20);
+
         const user = await createUser(
           {
             ...args,
           },
+          password,
           args.email,
           args.firstName,
           args.lastName
         );
         // eslint-disable-next-line functional/no-expression-statement
         console.info(
-          `Created new user with login [${user.login}] and name [${user.name}].`
+          `Created new user with login [${user.login}] and name [${user.name}].\nPassword: [${password}]`
         );
       } catch (error: unknown) {
         // eslint-disable-next-line functional/no-throw-statement

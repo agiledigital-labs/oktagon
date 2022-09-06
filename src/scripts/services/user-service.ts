@@ -23,6 +23,10 @@ export type User = {
    * User status as a string.
    */
   readonly status: okta.UserStatus;
+  /**
+   * User password as a string (optional).
+   */
+  readonly password?: string;
 };
 
 /**
