@@ -54,7 +54,7 @@ export default (
 }> =>
   rootCommand.command(
     'deactivate-user [user-id]',
-    'Deactivates the specified user',
+    'Deactivates the specified user, only works if user has not been deprovisioned.',
     // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => {
       // eslint-disable-next-line functional/no-expression-statement
