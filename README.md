@@ -20,45 +20,4 @@ Please note that the organisation url must be of the base adress rather than the
 
 The module additionally works for Okta's API services applications only. Applications must be granted the API scopes of users.read and users.manage.
 
-## Commands
-
-### list-users
-
-Running the following command:
-
-```
-oktagon list-users
-```
-Will instruct the computer to provide a list of all registered users' IDs, login emails, names, and statuses.
-
-It will not list users which have a status of `DEPROVISIONED`.
-
-### deactivate-user
-
-Running the following command:
-
-```
-oktagon deactivate-user (<ID>|<Email/Login>)
-```
-
-Will deactivate the user with the given argument. The deactivation will only work if the user is not already deprovisioned.
-
-### delete-user
-
-Running the following command:
-
-```
-oktagon delete-user (<ID>|<Email/Login>)
-```
-
-Will delete the user only if it the account has already been deactivated.
-
-### create-user
-
-Running the following command:
-
-```
-oktagon create-user --email <Email/Login> --fname <First Name> --lname <Last Name>
-```
-
-Will create a new user with an active status and will return confirmation in addition to the new password. The profile information will be set according to the provided arguments. All three arguments are required.
+Run `oktagon --help` to see a list of available commands.
