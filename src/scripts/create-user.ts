@@ -1,6 +1,7 @@
 import { CreateUserRequestOptions } from '@okta/okta-sdk-nodejs';
 import { Argv } from 'yargs';
 import { RootCommand } from '..';
+import { generate } from 'generate-password';
 
 import {
   oktaManageClient,
@@ -10,19 +11,18 @@ import {
   getUser,
 } from './services/user-service';
 
-import { generatePassword } from './services/password_manager';
+//import { generatePassword } from './services/password_manager';
 
 const createUser = async (
   oktaConfiguration: OktaConfiguration,
   password: string,
   email: string,
-  firstName = 'Unknown',
-  lastName = 'User'
+  firstName: string,
+  lastName: string
 ): Promise<User> => {
   const client = oktaManageClient(oktaConfiguration);
 
   const maybeOktaUser = getUser(email, client);
-  // eslint-disable-next-line functional/no-expression-statement
   const newUser: CreateUserRequestOptions = {
     profile: {
       firstName: firstName,
@@ -56,12 +56,12 @@ export default (
   readonly privateKey: string;
   readonly organisationUrl: string;
   readonly email: string;
-  readonly firstName?: string;
-  readonly lastName?: string;
+  readonly firstName: string;
+  readonly lastName: string;
 }> =>
   rootCommand.command(
     'create-user [email]',
-    'Deletes the specified user',
+    'Creates a new user with an active status, automatically generates and displays a password for the new user. Only works if no other user has the same login information.',
     // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => {
       // eslint-disable-next-line functional/no-expression-statement
@@ -93,13 +93,20 @@ export default (
       readonly privateKey: string;
       readonly organisationUrl: string;
       readonly email: string;
-      readonly firstName?: string;
-      readonly lastName?: string;
+      readonly firstName: string;
+      readonly lastName: string;
       // eslint-disable-next-line @typescript-eslint/require-await
     }) => {
       // eslint-disable-next-line functional/no-try-statement
       try {
-        const password = generatePassword(20);
+        const password = String(
+          generate({
+            length: 10,
+            numbers: true,
+            symbols: true,
+            strict: true,
+          })
+        );
 
         const user = await createUser(
           {
