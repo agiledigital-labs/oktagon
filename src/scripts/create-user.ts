@@ -11,8 +11,6 @@ import {
   getUser,
 } from './services/user-service';
 
-//import { generatePassword } from './services/password_manager';
-
 const createUser = async (
   oktaConfiguration: OktaConfiguration,
   password: string,
