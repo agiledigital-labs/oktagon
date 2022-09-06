@@ -1,52 +1,32 @@
-import { UserStatus, User as OktaUser } from '@okta/okta-sdk-nodejs';
+import { CreateUserRequestOptions } from '@okta/okta-sdk-nodejs';
 import { Argv } from 'yargs';
 import { RootCommand } from '..';
 
 import {
   oktaManageClient,
   OktaConfiguration,
-  oktaUserAsUser,
   User,
-  getUser,
+  oktaUserAsUser,
 } from './services/user-service';
 
-const deleteUser = async (
+const createUser = async (
   oktaConfiguration: OktaConfiguration,
-  userId: string
+  email: string,
+  firstName = '',
+  lastName = ''
 ): Promise<User> => {
   const client = oktaManageClient(oktaConfiguration);
 
-  const maybeOktaUser = await getUser(userId, client);
-
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-  const performDelete = async (oktaUser: OktaUser) => {
-    // eslint-disable-next-line functional/no-expression-statement
-    await oktaUser.delete({
-      sendEmail: false,
-    });
-
-    return oktaUserAsUser(oktaUser);
+  const newUser: CreateUserRequestOptions = {
+    profile: {
+      firstName: firstName,
+      lastName: lastName,
+      email: email,
+      login: email,
+    },
   };
 
-  // eslint-disable-next-line functional/functional-parameters
-  const throwOnNotDeprovisioned = () => {
-    // eslint-disable-next-line functional/no-throw-statement
-    throw new Error(
-      `User [${userId}] has not been deprovisioned. Deprovision before deleting.`
-    );
-  };
-
-  // eslint-disable-next-line functional/functional-parameters
-  const throwOnMissing = () => {
-    // eslint-disable-next-line functional/no-throw-statement
-    throw new Error(`User [${userId}] does not exist. Can not delete.`);
-  };
-
-  return maybeOktaUser === undefined
-    ? throwOnMissing()
-    : maybeOktaUser.status === UserStatus.DEPROVISIONED
-    ? performDelete(maybeOktaUser)
-    : throwOnNotDeprovisioned();
+  return oktaUserAsUser(await client.createUser(newUser));
 };
 
 export default (
@@ -56,47 +36,70 @@ export default (
   readonly clientId: string;
   readonly privateKey: string;
   readonly organisationUrl: string;
-  readonly userId: string;
+  readonly email: string;
+  readonly firstName?: string;
+  readonly lastName?: string;
 }> =>
   rootCommand.command(
-    'delete-user [user-id]',
+    'create-user [email]',
     'Deletes the specified user',
     // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => {
       // eslint-disable-next-line functional/no-expression-statement
-      yargs.positional('user-id', {
-        describe: 'the identifier of the user to delete',
-        type: 'string',
-        demandOption: true,
-      });
+      yargs
+        .positional('email', {
+          type: 'string',
+          alias: ['login'],
+          // eslint-disable-next-line quotes
+          describe: "The new user's login/email",
+        })
+        .option('fname', {
+          type: 'string',
+          alias: ['first-name'],
+          // eslint-disable-next-line quotes
+          describe: "The new user's first name",
+        })
+        .option('lname', {
+          type: 'string',
+          alias: ['last-name'],
+          // eslint-disable-next-line quotes
+          describe: "The new user's last name",
+        });
     },
     async (args: {
       readonly clientId: string;
       readonly privateKey: string;
       readonly organisationUrl: string;
-      readonly userId: string;
+      readonly email: string;
+      readonly firstName?: string;
+      readonly lastName?: string;
+      // eslint-disable-next-line @typescript-eslint/require-await
     }) => {
       // eslint-disable-next-line functional/no-try-statement
       try {
-        const user = await deleteUser(
+        const user = await createUser(
           {
             ...args,
           },
-          args.userId
+          args.email,
+          args.firstName,
+          args.lastName
         );
         // eslint-disable-next-line functional/no-expression-statement
-        console.info(`Deleted [${user.id}] [${user.email}].`);
+        console.info(
+          `Created user with login [${user.login}] and name [${user.name}].`
+        );
       } catch (error: unknown) {
         // eslint-disable-next-line functional/no-throw-statement
         throw error instanceof Error
           ? new Error(
-              `Failed to delete user [${args.userId}] in [${args.organisationUrl}].`,
+              `Failed to create user [${args.email}] in [${args.organisationUrl}].`,
               {
                 cause: error,
               }
             )
           : new Error(
-              `Failed to delete user [${args.userId}] in [${
+              `Failed to create user [${args.email}] in [${
                 args.organisationUrl
               }] because of [${JSON.stringify(error)}].`
             );
