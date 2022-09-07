@@ -3,7 +3,7 @@ import { RootCommand } from '..';
 import { Response } from 'node-fetch';
 
 import { getUser } from './services/user-service';
-import { getGroup } from './services/group-service';
+import { getGroup, userExistsInGroup } from './services/group-service';
 import { oktaManageClient, OktaConfiguration } from './services/client-service';
 
 const addUserToGroup = async (
@@ -16,17 +16,14 @@ const addUserToGroup = async (
   const maybeOktaUser = await getUser(user, client);
   const maybeOktaGroup = await getGroup(group, client);
 
-  const throwOnMissing = (
-    userMissing: boolean,
-    groupMissing: boolean
-  ): Promise<Response> => {
+  const throwOnMissing = (userMissing: boolean, groupMissing: boolean) => {
     // eslint-disable-next-line functional/no-throw-statement
     throw new Error(
       `${
         userMissing
           ? `User [${user}] does not exist. Can not add to an existing group.`
           : ''
-      } ${
+      }${userMissing && groupMissing ? '\n' : ''}${
         groupMissing
           ? `Group [${group}] does not exist. Can not add a user to a non-existent group.`
           : ''
@@ -34,8 +31,16 @@ const addUserToGroup = async (
     );
   };
 
+  // eslint-disable-next-line functional/functional-parameters
+  const throwOnAlreadyPresent = () => {
+    // eslint-disable-next-line functional/no-throw-statement
+    throw new Error('User already exists in group.');
+  };
+
   return maybeOktaUser === undefined || maybeOktaGroup === undefined
     ? throwOnMissing(maybeOktaUser === undefined, maybeOktaGroup === undefined)
+    : (await userExistsInGroup(maybeOktaGroup, maybeOktaUser.id))
+    ? throwOnAlreadyPresent()
     : maybeOktaUser.addToGroup(maybeOktaGroup.id);
 };
 

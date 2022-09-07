@@ -48,3 +48,31 @@ export const getGroup = async (
       : Promise.reject(error);
   });
 };
+
+/**
+ * Determines if a user already exists within a group. Only use if group does exist.
+ * @param oktaGroup the group that is being searched within
+ * @param userId the user in question's id
+ * @returns a boolean as to if the user exists in the group
+ */
+export const userExistsInGroup = async (
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+  oktaGroup: okta.Group,
+  userId: string
+): Promise<boolean> => {
+  // No Okta API method allows for a functional method to iterate over the listUsers() array. So it is neccesary to
+  // use side effects in order to get the desired result.
+
+  // eslint-disable-next-line functional/no-let
+  let foundUser = false;
+  // eslint-disable-next-line functional/no-expression-statement, @typescript-eslint/prefer-readonly-parameter-types
+  await oktaGroup
+    .listUsers()
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types, functional/no-return-void
+    .each((user) => {
+      // eslint-disable-next-line functional/no-expression-statement
+      foundUser = foundUser || user.id === userId;
+    });
+
+  return foundUser;
+};
