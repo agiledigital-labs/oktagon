@@ -3,7 +3,7 @@ import { RootCommand } from '..';
 import { Response } from 'node-fetch';
 
 import { getUser } from './services/user-service';
-import { getGroup, userExistsInGroup } from './services/group-service';
+import { getGroup } from './services/group-service';
 import { oktaManageClient, OktaConfiguration } from './services/client-service';
 
 const addUserToGroup = async (
@@ -32,18 +32,10 @@ const addUserToGroup = async (
     );
   };
 
-  // eslint-disable-next-line functional/functional-parameters
-  const throwOnAlreadyPresent = () => {
-    // eslint-disable-next-line functional/no-throw-statement
-    throw new Error('User already exists in group.');
-  };
-
   return maybeOktaUser === undefined
     ? throwOnMissingUser()
     : maybeOktaGroup === undefined
     ? throwOnMissingGroup()
-    : (await userExistsInGroup(maybeOktaGroup, maybeOktaUser.id))
-    ? throwOnAlreadyPresent()
     : maybeOktaUser.addToGroup(maybeOktaGroup.id);
 };
 
@@ -59,7 +51,7 @@ export default (
 }> =>
   rootCommand.command(
     'add-user-to-group [user] [group]',
-    'Adds an existing user to an existing group.',
+    'Adds an existing user to an existing group. Will perform the operation even if the user already exists in the group.',
     // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => {
       // eslint-disable-next-line functional/no-expression-statement
@@ -88,7 +80,7 @@ export default (
     }) => {
       // eslint-disable-next-line functional/no-try-statement
       try {
-        const throwOnBadResponse = (response: Response): string => {
+        const throwOnBadResponse = (response: unknown): string => {
           // eslint-disable-next-line functional/no-throw-statement
           throw new Error(
             `User [${args.user}] was not added to group [${
