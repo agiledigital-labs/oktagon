@@ -16,18 +16,19 @@ const addUserToGroup = async (
   const maybeOktaUser = await getUser(user, client);
   const maybeOktaGroup = await getGroup(group, client);
 
-  const throwOnMissing = (userMissing: boolean, groupMissing: boolean) => {
+  // eslint-disable-next-line functional/functional-parameters
+  const throwOnMissingUser = () => {
     // eslint-disable-next-line functional/no-throw-statement
     throw new Error(
-      `${
-        userMissing
-          ? `User [${user}] does not exist. Can not add to an existing group.`
-          : ''
-      }${userMissing && groupMissing ? '\n' : ''}${
-        groupMissing
-          ? `Group [${group}] does not exist. Can not add a user to a non-existent group.`
-          : ''
-      }`
+      `User [${user}] does not exist. Can not add to an existing group.`
+    );
+  };
+
+  // eslint-disable-next-line functional/functional-parameters
+  const throwOnMissingGroup = () => {
+    // eslint-disable-next-line functional/no-throw-statement
+    throw new Error(
+      `Group [${group}] does not exist. Can not add a user to a non-existent group.`
     );
   };
 
@@ -37,8 +38,10 @@ const addUserToGroup = async (
     throw new Error('User already exists in group.');
   };
 
-  return maybeOktaUser === undefined || maybeOktaGroup === undefined
-    ? throwOnMissing(maybeOktaUser === undefined, maybeOktaGroup === undefined)
+  return maybeOktaUser === undefined
+    ? throwOnMissingUser()
+    : maybeOktaGroup === undefined
+    ? throwOnMissingGroup()
     : (await userExistsInGroup(maybeOktaGroup, maybeOktaUser.id))
     ? throwOnAlreadyPresent()
     : maybeOktaUser.addToGroup(maybeOktaGroup.id);
@@ -85,6 +88,14 @@ export default (
     }) => {
       // eslint-disable-next-line functional/no-try-statement
       try {
+        const throwOnBadResponse = (response: Response): string => {
+          // eslint-disable-next-line functional/no-throw-statement
+          throw new Error(
+            `User [${args.user}] was not added to group [${
+              args.group
+            }] correctly, due to a bad response: [${JSON.stringify(response)}]`
+          );
+        };
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const response: Response = await addUserToGroup(
           {
@@ -98,7 +109,7 @@ export default (
           // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-member-access
           response.ok
             ? `Added user [${args.user}] to group [${args.group}].`
-            : `User [${args.user}] was not added to group [${args.group}] correctly, however no errors were caught when attempting to do so.`
+            : throwOnBadResponse(response)
         );
       } catch (error: unknown) {
         // eslint-disable-next-line functional/no-throw-statement
