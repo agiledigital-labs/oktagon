@@ -26,8 +26,8 @@ Run `oktagon --help` to see a list of available commands.
 
 Some commands require different access to application scopes. The list provided below details what scopes are required to run a given command:
 
-COMMAND                 PERMISSIONS
 ```
+COMMAND                 PERMISSIONS
 list-users              okta.users.read
 create-user             okta.users.manage
 deactivate-user         okta.users.manage
