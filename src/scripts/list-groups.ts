@@ -70,7 +70,7 @@ export default (
   rootCommand.command(
     'list-groups',
     // eslint-disable-next-line quotes
-    "Provides a list of all groups' logins, emails, display names, and statuses. Allows for environment variables under the name OKTAGON_[arg].",
+    "Provides a list of all groups' ID's, names, and types.",
     // eslint-disable-next-line functional/no-return-void, functional/functional-parameters, @typescript-eslint/no-empty-function
     () => {},
     async (args: {

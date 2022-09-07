@@ -65,13 +65,13 @@ export default (
           type: 'string',
           alias: ['user-login', 'user-email', 'user'],
           // eslint-disable-next-line quotes
-          describe: "The new user's login/email",
+          describe: "The user's ID, login, or email address",
           demandOption: true,
         })
         .option('group', {
           type: 'string',
           // eslint-disable-next-line quotes
-          describe: "The new user's first name",
+          describe: "The group's ID",
           demandOption: true,
         });
     },
