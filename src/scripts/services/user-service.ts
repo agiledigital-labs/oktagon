@@ -43,18 +43,6 @@ export const oktaUserAsUser = (oktaUser: okta.User) => ({
 });
 
 /**
- * Configuration required to create an Okta client.
- */
-export type OktaConfiguration = {
-  /** The identifier of the client application in Okta. */
-  readonly clientId: string;
-  /** JSON encoded private key for the application. */
-  readonly privateKey: string;
-  /** URL of the Okta organisation. */
-  readonly organisationUrl: string;
-};
-
-/**
  * Retrieves a user's details from Okta
  * @param userId the id of the user whose details should be retrieved.
  * @param client the client that should be used to retrieve the details.
@@ -72,27 +60,3 @@ export const getUser = async (
       : Promise.reject(error);
   });
 };
-
-/**
- * Creates a client that can read user information from Okta.
- * @param oktaConfiguration configuration to use when construction the client.
- * @returns the Okta client.
- */
-export const oktaReadOnlyClient = (oktaConfiguration: OktaConfiguration) =>
-  new okta.Client({
-    ...oktaConfiguration,
-    authorizationMode: 'PrivateKey',
-    scopes: ['okta.users.read'],
-  });
-
-/**
- * Creates a client that can read and manage user information in Okta.
- * @param oktaConfiguration configuration to use when construction the client.
- * @returns the Okta client.
- */
-export const oktaManageClient = (oktaConfiguration: OktaConfiguration) =>
-  new okta.Client({
-    ...oktaConfiguration,
-    authorizationMode: 'PrivateKey',
-    scopes: ['okta.users.manage'],
-  });

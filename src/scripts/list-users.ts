@@ -2,12 +2,11 @@ import { Argv } from 'yargs';
 import { RootCommand } from '..';
 
 import { table } from 'table';
+import { oktaUserAsUser, User } from './services/user-service';
 import {
   oktaReadOnlyClient,
   OktaConfiguration,
-  oktaUserAsUser,
-  User,
-} from './services/user-service';
+} from './services/client-service';
 
 /**
  * Gets a list of users given a set of arguments relating to the client's information.
