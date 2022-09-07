@@ -1,44 +1,42 @@
-import { CreateUserRequestOptions } from '@okta/okta-sdk-nodejs';
 import { Argv } from 'yargs';
 import { RootCommand } from '..';
-import { generate } from 'generate-password';
+import { Response } from 'node-fetch';
 
-import { oktaUserAsUser, User, getUser } from './services/user-service';
+import { getUser } from './services/user-service';
+import { getGroup } from './services/group-service';
 import { oktaManageClient, OktaConfiguration } from './services/client-service';
 
-const createUser = async (
+const addUserToGroup = async (
   oktaConfiguration: OktaConfiguration,
-  password: string,
-  email: string,
-  firstName: string,
-  lastName: string
-): Promise<User> => {
-  const client = oktaManageClient(oktaConfiguration);
+  user: string,
+  group: string
+): Promise<Response> => {
+  const client = oktaManageClient(oktaConfiguration, ['groups', 'users']);
 
-  const maybeOktaUser = await getUser(email, client);
-  const newUser: CreateUserRequestOptions = {
-    profile: {
-      firstName: firstName,
-      lastName: lastName,
-      email: email,
-      login: email,
-    },
-    credentials: {
-      password: { value: password },
-    },
-  };
+  const maybeOktaUser = await getUser(user, client);
+  const maybeOktaGroup = await getGroup(group, client);
 
-  // eslint-disable-next-line functional/functional-parameters
-  const throwOnExisting = () => {
+  const throwOnMissing = (
+    userMissing: boolean,
+    groupMissing: boolean
+  ): Promise<Response> => {
     // eslint-disable-next-line functional/no-throw-statement
     throw new Error(
-      `User [${email}] already exists. Can not create a new user.`
+      `${
+        userMissing
+          ? `User [${user}] does not exist. Can not add to an existing group.`
+          : ''
+      } ${
+        groupMissing
+          ? `Group [${group}] does not exist. Can not add a user to a non-existent group.`
+          : ''
+      }`
     );
   };
 
-  return maybeOktaUser === undefined
-    ? oktaUserAsUser(await client.createUser(newUser))
-    : throwOnExisting();
+  return maybeOktaUser === undefined || maybeOktaGroup === undefined
+    ? throwOnMissing(maybeOktaUser === undefined, maybeOktaGroup === undefined)
+    : maybeOktaUser.addToGroup(maybeOktaGroup.id);
 };
 
 export default (
@@ -48,36 +46,27 @@ export default (
   readonly clientId: string;
   readonly privateKey: string;
   readonly organisationUrl: string;
-  readonly email: string;
-  readonly firstName: string;
-  readonly lastName: string;
+  readonly user: string;
+  readonly group: string;
 }> =>
   rootCommand.command(
-    'create-user [email]',
-    'Creates a new user with an active status, automatically generates and displays a password for the new user. Only works if no other user has the same login information.',
+    'add-user-to-group [user] [group]',
+    'Adds an existing user to an existing group.',
     // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => {
       // eslint-disable-next-line functional/no-expression-statement
       yargs
-        .option('email', {
+        .option('user-id', {
           type: 'string',
-          alias: ['login'],
+          alias: ['user-login', 'user-email', 'user'],
           // eslint-disable-next-line quotes
           describe: "The new user's login/email",
           demandOption: true,
         })
-        .option('fname', {
+        .option('group', {
           type: 'string',
-          alias: ['first-name'],
           // eslint-disable-next-line quotes
           describe: "The new user's first name",
-          demandOption: true,
-        })
-        .option('lname', {
-          type: 'string',
-          alias: ['last-name'],
-          // eslint-disable-next-line quotes
-          describe: "The new user's last name",
           demandOption: true,
         });
     },
@@ -85,48 +74,42 @@ export default (
       readonly clientId: string;
       readonly privateKey: string;
       readonly organisationUrl: string;
-      readonly email: string;
-      readonly firstName: string;
-      readonly lastName: string;
+      readonly user: string;
+      readonly group: string;
       // eslint-disable-next-line @typescript-eslint/require-await
     }) => {
       // eslint-disable-next-line functional/no-try-statement
       try {
-        const password = String(
-          generate({
-            length: 10,
-            numbers: true,
-            symbols: true,
-            strict: true,
-          })
-        );
-
-        const user = await createUser(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const response: Response = await addUserToGroup(
           {
             ...args,
           },
-          password,
-          args.email,
-          args.firstName,
-          args.lastName
+          args.user,
+          args.group
         );
         // eslint-disable-next-line functional/no-expression-statement
         console.info(
-          `Created new user with login [${user.login}] and name [${user.name}].\nPassword: [${password}]`
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-member-access
+          response.ok
+            ? `Added user [${args.user}] to group [${args.group}].`
+            : `User [${args.user}] was not added to group [${args.group}] correctly, however no errors were caught when attempting to do so.`
         );
       } catch (error: unknown) {
         // eslint-disable-next-line functional/no-throw-statement
         throw error instanceof Error
           ? new Error(
-              `Failed to create new user [${args.email}] in [${args.organisationUrl}].`,
+              `Failed to add existing user [${args.user}] to group [${args.group}] in [${args.organisationUrl}].`,
               {
                 cause: error,
               }
             )
           : new Error(
-              `Failed to create new user [${args.email}] in [${
-                args.organisationUrl
-              }] because of [${JSON.stringify(error)}].`
+              `Failed to add existing user [${args.user}] to group [${
+                args.group
+              }] in [${args.organisationUrl}] because of [${JSON.stringify(
+                error
+              )}].`
             );
       }
     }
