@@ -15,23 +15,31 @@ export type OktaConfiguration = {
 /**
  * Creates a client that can read user information from Okta.
  * @param oktaConfiguration configuration to use when construction the client.
+ * @param scopes read scopes to be used with the client
  * @returns the Okta client.
  */
-export const oktaReadOnlyClient = (oktaConfiguration: OktaConfiguration) =>
+export const oktaReadOnlyClient = (
+  oktaConfiguration: OktaConfiguration,
+  scopes: readonly string[] = ['users']
+) =>
   new okta.Client({
     ...oktaConfiguration,
     authorizationMode: 'PrivateKey',
-    scopes: ['okta.users.read'],
+    scopes: scopes.map((scope) => 'okta.' + scope + '.read'),
   });
 
 /**
  * Creates a client that can read and manage user information in Okta.
  * @param oktaConfiguration configuration to use when construction the client.
+ * @param scopes manage scopes to be used with the client
  * @returns the Okta client.
  */
-export const oktaManageClient = (oktaConfiguration: OktaConfiguration) =>
+export const oktaManageClient = (
+  oktaConfiguration: OktaConfiguration,
+  scopes: readonly string[] = ['users']
+) =>
   new okta.Client({
     ...oktaConfiguration,
     authorizationMode: 'PrivateKey',
-    scopes: ['okta.users.manage'],
+    scopes: scopes.map((scope) => 'okta.' + scope + '.manage'),
   });

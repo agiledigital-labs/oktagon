@@ -32,7 +32,7 @@ export type User = {
  * @returns the converted User.
  */
 // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-export const oktaUserAsUser = (oktaUser: okta.User) => ({
+export const oktaUserAsUser = (oktaUser: okta.User): User => ({
   id: oktaUser.id,
   login: oktaUser.profile.login,
   email: oktaUser.profile.email,
