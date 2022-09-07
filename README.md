@@ -27,11 +27,13 @@ Run `oktagon --help` to see a list of available commands.
 Some commands require different access to application scopes. The list provided below details what scopes are required to run a given command:
 
 COMMAND                 PERMISSIONS
+```
 list-users              okta.users.read
 create-user             okta.users.manage
 deactivate-user         okta.users.manage
 delete-user             okta.users.manage
 list-groups             okta.groups.read
 add-user-to-group       okta.groups.manage, okta.users.manage
+```
 
 Attemting to run a command without the required permissions will most likely result in a 400 or 403 HTTPS error.
