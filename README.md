@@ -29,6 +29,7 @@ Some commands require different access to application scopes. The list provided 
 ```
 COMMAND                 PERMISSIONS
 list-users              okta.users.read
+list-users [group]      okta.users.read, okta.groups.read
 create-user             okta.users.manage
 deactivate-user         okta.users.manage
 delete-user             okta.users.manage

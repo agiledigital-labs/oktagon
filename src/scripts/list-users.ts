@@ -7,6 +7,8 @@ import {
   oktaReadOnlyClient,
   OktaConfiguration,
 } from './services/client-service';
+import { Client, Group } from '@okta/okta-sdk-nodejs';
+import { getGroup } from './services/group-service';
 
 /**
  * Gets a list of users given a set of arguments relating to the client's information.
@@ -16,9 +18,15 @@ import {
  *
  */
 const fetchUsers = async (
-  oktaConfiguration: OktaConfiguration
+  oktaConfiguration: OktaConfiguration,
+  group?: string
 ): Promise<readonly User[]> => {
-  const client = oktaReadOnlyClient(oktaConfiguration);
+  const groupFlag = group === undefined;
+
+  const client = oktaReadOnlyClient(
+    oktaConfiguration,
+    groupFlag ? ['users'] : ['users', 'groups']
+  );
 
   // We need to populate users with all of the client data so it can be
   // returned. Okta's listUsers() function returns a custom collection that
@@ -27,14 +35,30 @@ const fetchUsers = async (
   // eslint-disable-next-line functional/prefer-readonly-type
   const users: User[] = [];
 
+  const pullObject: Client | Group | undefined = groupFlag
+    ? client
+    : await getGroup(group, client);
+
+  // eslint-disable-next-line functional/functional-parameters
+  const throwOnMissingGroup = () => {
+    // eslint-disable-next-line functional/no-throw-statement
+    throw new Error(
+      `Group [${String(
+        group
+      )}] does not exist. Can not list users from a non-existent group.`
+    );
+  };
+
   // eslint-disable-next-line functional/no-expression-statement
-  await client
-    .listUsers()
-    // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
-    .each((oktaUser) => {
-      // eslint-disable-next-line functional/immutable-data, functional/no-expression-statement
-      users.push(oktaUserAsUser(oktaUser));
-    });
+  pullObject === undefined
+    ? throwOnMissingGroup()
+    : await pullObject
+        .listUsers()
+        // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
+        .each((oktaUser) => {
+          // eslint-disable-next-line functional/immutable-data, functional/no-expression-statement
+          users.push(oktaUserAsUser(oktaUser));
+        });
 
   return users;
 };
@@ -71,32 +95,58 @@ export default (
   readonly clientId: string;
   readonly privateKey: string;
   readonly organisationUrl: string;
+  readonly group?: string;
 }> =>
   rootCommand.command(
     'list-users',
     // eslint-disable-next-line quotes
     "Provides a list of all users' ID's, email addresses, display names, and statuses.",
     // eslint-disable-next-line functional/no-return-void, functional/functional-parameters, @typescript-eslint/no-empty-function
-    () => {},
+    // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
+    (yargs) => {
+      // eslint-disable-next-line functional/no-expression-statement
+      yargs.option('group', {
+        type: 'string',
+        // eslint-disable-next-line quotes
+        describe: "The group's ID",
+      });
+    },
     async (args: {
       readonly clientId: string;
       readonly privateKey: string;
       readonly organisationUrl: string;
+      readonly group?: string;
     }) => {
       // eslint-disable-next-line functional/no-try-statement
       try {
-        const users = await fetchUsers({
-          ...args,
-        });
+        const users = await fetchUsers(
+          {
+            ...args,
+          },
+          args.group
+        );
+
+        // eslint-disable-next-line functional/no-expression-statement
+        console.info(
+          args.group === undefined
+            ? 'Attempting to list all users ...\n'
+            : `Attempting to list users from group: [${args.group}] ...\n`
+        );
+
         const tabulated = usersTable(users);
         // eslint-disable-next-line functional/no-expression-statement
         console.info(tabulated);
       } catch (error: unknown) {
         // eslint-disable-next-line functional/no-throw-statement
         throw error instanceof Error
-          ? new Error(`Failed to fetch users from [${args.organisationUrl}].`, {
-              cause: error,
-            })
+          ? new Error(
+              `Failed to fetch users from [${args.organisationUrl}]${
+                args.group === undefined ? '' : ` and group [${args.group}]`
+              }.`,
+              {
+                cause: error,
+              }
+            )
           : new Error(
               `Failed to fetch users from [${
                 args.organisationUrl
