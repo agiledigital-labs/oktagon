@@ -6,6 +6,10 @@ import { getUser } from './services/user-service';
 import { getGroup } from './services/group-service';
 import { oktaManageClient, OktaConfiguration } from './services/client-service';
 
+// There is no suitable way to check and confirm that a user exists/does not exist within a particular group outside of
+// searching for them in a large array of users. So to preserve a timewise nature. it is best to just let commands work
+// even if it didn't do anything.
+
 const removeUserfromGroup = async (
   oktaConfiguration: OktaConfiguration,
   user: string,
