@@ -55,7 +55,7 @@ export default (
 }> =>
   rootCommand.command(
     'remove-user-from-group [user] [group]',
-    'removes an existing user from an existing group. Will perform the operation even if the user already does not exist in the group.',
+    'Removes an existing user from an existing group. Will perform the operation even if the user already does not exist in the group.',
     // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => {
       // eslint-disable-next-line functional/no-expression-statement
@@ -64,7 +64,7 @@ export default (
           type: 'string',
           alias: ['user-login', 'user-email', 'user'],
           // eslint-disable-next-line quotes
-          describe: "The user's ID, login, or email removeress",
+          describe: "The user's ID, login, or email address",
           demandOption: true,
         })
         .option('group', {
@@ -98,7 +98,7 @@ export default (
         // eslint-disable-next-line functional/no-expression-statement
         console.info(
           response.ok
-            ? `removed user [${args.user}] from group [${args.group}].`
+            ? `Removed user [${args.user}] from group [${args.group}].`
             : throwOnBadResponse(response)
         );
       } catch (error: unknown) {
