@@ -80,19 +80,14 @@ export default (
       readonly organisationUrl: string;
       readonly user: string;
       readonly group: string;
-      // eslint-disable-next-line @typescript-eslint/require-await
     }) => {
       // eslint-disable-next-line functional/no-try-statement
       try {
         const throwOnBadResponse = (response: unknown): string => {
           // eslint-disable-next-line functional/no-throw-statement
-          throw new Error(
-            `User [${args.user}] was not added to group [${
-              args.group
-            }] correctly, due to a bad response: [${JSON.stringify(response)}]`
-          );
+          throw new Error(JSON.stringify(response));
         };
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
         const response: Response = await addUserToGroup(
           {
             ...args,
@@ -102,7 +97,6 @@ export default (
         );
         // eslint-disable-next-line functional/no-expression-statement
         console.info(
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-member-access
           response.ok
             ? `Added user [${args.user}] to group [${args.group}].`
             : throwOnBadResponse(response)
