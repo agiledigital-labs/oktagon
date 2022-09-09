@@ -97,7 +97,7 @@ export default (
   rootCommand.command(
     'list-users',
     // eslint-disable-next-line quotes
-    "Provides a list of all users' ID's, email addresses, display names, and statuses.",
+    "Provides a list of all users' ID's, email addresses, display names, and statuses. Allows a specification of a group to list from.",
     // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => {
       // eslint-disable-next-line functional/no-expression-statement
@@ -113,6 +113,8 @@ export default (
       readonly organisationUrl: string;
       readonly group?: string;
     }) => {
+      const groupFlag = args.group === undefined;
+
       // eslint-disable-next-line functional/no-try-statement
       try {
         const users = await fetchUsers(
@@ -124,7 +126,7 @@ export default (
 
         // eslint-disable-next-line functional/no-expression-statement
         console.info(
-          args.group === undefined
+          groupFlag
             ? 'Attempting to list all users ...\n'
             : `Attempting to list users from group: [${args.group}] ...\n`
         );
@@ -137,7 +139,7 @@ export default (
         throw error instanceof Error
           ? new Error(
               `Failed to fetch users from [${args.organisationUrl}]${
-                args.group === undefined ? '' : ` and group [${args.group}]`
+                groupFlag ? '' : ` and group [${args.group}]`
               }.`,
               {
                 cause: error,
