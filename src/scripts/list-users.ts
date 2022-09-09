@@ -7,7 +7,6 @@ import {
   oktaReadOnlyClient,
   OktaConfiguration,
 } from './services/client-service';
-import { Client, Group } from '@okta/okta-sdk-nodejs';
 import { getGroup } from './services/group-service';
 
 /**
@@ -35,9 +34,7 @@ const fetchUsers = async (
   // eslint-disable-next-line functional/prefer-readonly-type
   const users: User[] = [];
 
-  const pullObject: Client | Group | undefined = groupFlag
-    ? client
-    : await getGroup(group, client);
+  const pullObject = groupFlag ? client : await getGroup(group, client);
 
   // eslint-disable-next-line functional/functional-parameters
   const throwOnMissingGroup = () => {
@@ -101,7 +98,6 @@ export default (
     'list-users',
     // eslint-disable-next-line quotes
     "Provides a list of all users' ID's, email addresses, display names, and statuses.",
-    // eslint-disable-next-line functional/no-return-void, functional/functional-parameters, @typescript-eslint/no-empty-function
     // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => {
       // eslint-disable-next-line functional/no-expression-statement
