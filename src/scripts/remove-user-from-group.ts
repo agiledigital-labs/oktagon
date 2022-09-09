@@ -10,7 +10,7 @@ import { oktaManageClient, OktaConfiguration } from './services/client-service';
 // searching for them in a large array of users. So to preserve a timewise nature. it is best to just let commands work
 // even if it didn't do anything.
 
-const addUserToGroup = async (
+const removeUserfromGroup = async (
   oktaConfiguration: OktaConfiguration,
   user: string,
   group: string
@@ -24,7 +24,7 @@ const addUserToGroup = async (
   const throwOnMissingUser = () => {
     // eslint-disable-next-line functional/no-throw-statement
     throw new Error(
-      `User [${user}] does not exist. Can not add to an existing group.`
+      `User [${user}] does not exist. Can not remove from an existing group.`
     );
   };
 
@@ -32,7 +32,7 @@ const addUserToGroup = async (
   const throwOnMissingGroup = () => {
     // eslint-disable-next-line functional/no-throw-statement
     throw new Error(
-      `Group [${group}] does not exist. Can not add a user to a non-existent group.`
+      `Group [${group}] does not exist. Can not remove a user from a non-existent group.`
     );
   };
 
@@ -40,7 +40,7 @@ const addUserToGroup = async (
     ? throwOnMissingUser()
     : maybeOktaGroup === undefined
     ? throwOnMissingGroup()
-    : maybeOktaUser.addToGroup(maybeOktaGroup.id);
+    : maybeOktaGroup.removeUser(maybeOktaUser.id);
 };
 
 export default (
@@ -54,8 +54,8 @@ export default (
   readonly group: string;
 }> =>
   rootCommand.command(
-    'add-user-to-group [user] [group]',
-    'Adds an existing user to an existing group. Will perform the operation even if the user already exists in the group.',
+    'remove-user-from-group [user] [group]',
+    'Removes an existing user from an existing group. Will perform the operation even if the user already does not exist in the group.',
     // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => {
       // eslint-disable-next-line functional/no-expression-statement
@@ -88,7 +88,7 @@ export default (
           throw new Error(JSON.stringify(response));
         };
 
-        const response: Response = await addUserToGroup(
+        const response: Response = await removeUserfromGroup(
           {
             ...args,
           },
@@ -98,20 +98,20 @@ export default (
         // eslint-disable-next-line functional/no-expression-statement
         console.info(
           response.ok
-            ? `Added user [${args.user}] to group [${args.group}].`
+            ? `Removed user [${args.user}] from group [${args.group}].`
             : throwOnBadResponse(response)
         );
       } catch (error: unknown) {
         // eslint-disable-next-line functional/no-throw-statement
         throw error instanceof Error
           ? new Error(
-              `Failed to add existing user [${args.user}] to group [${args.group}] in [${args.organisationUrl}].`,
+              `Failed from remove existing user [${args.user}] from group [${args.group}] in [${args.organisationUrl}].`,
               {
                 cause: error,
               }
             )
           : new Error(
-              `Failed to add existing user [${args.user}] to group [${
+              `Failed from remove existing user [${args.user}] remove group [${
                 args.group
               }] in [${args.organisationUrl}] because of [${JSON.stringify(
                 error
