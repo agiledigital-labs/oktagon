@@ -66,23 +66,25 @@ const fetchUsers = async (
  * @returns user information table formatted as a string.
  */
 const usersTable = (users: readonly User[]): string => {
-  return table(
-    [
-      ['ID', 'Email', 'Name', 'Status'],
-      ...users.map((user: User) => [
-        user.id,
-        user.email,
-        user.name,
-        user.status,
-      ]),
-    ],
-    {
-      // eslint-disable-next-line functional/functional-parameters
-      drawHorizontalLine: () => false,
-      // eslint-disable-next-line functional/functional-parameters
-      drawVerticalLine: () => false,
-    }
-  );
+  return users.length === 0
+    ? 'No users to display.\n'
+    : table(
+        [
+          ['ID', 'Email', 'Name', 'Status'],
+          ...users.map((user: User) => [
+            user.id,
+            user.email,
+            user.name,
+            user.status,
+          ]),
+        ],
+        {
+          // eslint-disable-next-line functional/functional-parameters
+          drawHorizontalLine: () => false,
+          // eslint-disable-next-line functional/functional-parameters
+          drawVerticalLine: () => false,
+        }
+      );
 };
 
 export default (
