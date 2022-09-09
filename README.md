@@ -18,6 +18,22 @@ The operation will only work if you have provided the correct client ID (in stri
 
 Please note that the organisation url must be of the base address rather than the admin url. Trying to pass an argument as `https://website-name-admin.okta.com'` instead of `https://website-name.okta.com'` will result in a 404 error.
 
-The module additionally works for Okta's API services applications only. Applications must be granted the API scopes of users.read and users.manage. For list-users, only users.read is required.
+The module additionally works for Okta's API services applications only.
 
 Run `oktagon --help` to see a list of available commands.
+
+## Application scopes
+
+Some commands require different access to application scopes. The list provided below details what scopes are required to run a given command:
+
+```
+COMMAND                 PERMISSIONS
+list-users              okta.users.read
+create-user             okta.users.manage
+deactivate-user         okta.users.manage
+delete-user             okta.users.manage
+list-groups             okta.groups.read
+add-user-to-group       okta.groups.manage, okta.users.manage
+```
+
+Attemting to run a command without the required permissions will most likely result in a 400 or 403 HTTPS error.

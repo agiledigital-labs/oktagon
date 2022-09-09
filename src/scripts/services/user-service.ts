@@ -32,7 +32,7 @@ export type User = {
  * @returns the converted User.
  */
 // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-export const oktaUserAsUser = (oktaUser: okta.User) => ({
+export const oktaUserAsUser = (oktaUser: okta.User): User => ({
   id: oktaUser.id,
   login: oktaUser.profile.login,
   email: oktaUser.profile.email,
@@ -41,18 +41,6 @@ export const oktaUserAsUser = (oktaUser: okta.User) => ({
     .join(' '),
   status: oktaUser.status,
 });
-
-/**
- * Configuration required to create an Okta client.
- */
-export type OktaConfiguration = {
-  /** The identifier of the client application in Okta. */
-  readonly clientId: string;
-  /** JSON encoded private key for the application. */
-  readonly privateKey: string;
-  /** URL of the Okta organisation. */
-  readonly organisationUrl: string;
-};
 
 /**
  * Retrieves a user's details from Okta
@@ -72,27 +60,3 @@ export const getUser = async (
       : Promise.reject(error);
   });
 };
-
-/**
- * Creates a client that can read user information from Okta.
- * @param oktaConfiguration configuration to use when construction the client.
- * @returns the Okta client.
- */
-export const oktaReadOnlyClient = (oktaConfiguration: OktaConfiguration) =>
-  new okta.Client({
-    ...oktaConfiguration,
-    authorizationMode: 'PrivateKey',
-    scopes: ['okta.users.read'],
-  });
-
-/**
- * Creates a client that can read and manage user information in Okta.
- * @param oktaConfiguration configuration to use when construction the client.
- * @returns the Okta client.
- */
-export const oktaManageClient = (oktaConfiguration: OktaConfiguration) =>
-  new okta.Client({
-    ...oktaConfiguration,
-    authorizationMode: 'PrivateKey',
-    scopes: ['okta.users.manage'],
-  });

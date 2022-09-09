@@ -3,13 +3,8 @@ import { Argv } from 'yargs';
 import { RootCommand } from '..';
 import { generate } from 'generate-password';
 
-import {
-  oktaManageClient,
-  OktaConfiguration,
-  User,
-  oktaUserAsUser,
-  getUser,
-} from './services/user-service';
+import { oktaUserAsUser, User, getUser } from './services/user-service';
+import { oktaManageClient, OktaConfiguration } from './services/client-service';
 
 const createUser = async (
   oktaConfiguration: OktaConfiguration,

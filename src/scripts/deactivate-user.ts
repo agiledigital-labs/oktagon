@@ -2,13 +2,8 @@ import { UserStatus, User as OktaUser } from '@okta/okta-sdk-nodejs';
 import { Argv } from 'yargs';
 import { RootCommand } from '..';
 
-import {
-  oktaManageClient,
-  OktaConfiguration,
-  oktaUserAsUser,
-  User,
-  getUser,
-} from './services/user-service';
+import { oktaUserAsUser, User, getUser } from './services/user-service';
+import { oktaManageClient, OktaConfiguration } from './services/client-service';
 
 const deactivateUser = async (
   oktaConfiguration: OktaConfiguration,

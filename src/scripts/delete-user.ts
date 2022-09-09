@@ -2,13 +2,8 @@ import { UserStatus, User as OktaUser } from '@okta/okta-sdk-nodejs';
 import { Argv } from 'yargs';
 import { RootCommand } from '..';
 
-import {
-  oktaManageClient,
-  OktaConfiguration,
-  oktaUserAsUser,
-  User,
-  getUser,
-} from './services/user-service';
+import { oktaUserAsUser, User, getUser } from './services/user-service';
+import { oktaManageClient, OktaConfiguration } from './services/client-service';
 
 const deleteUser = async (
   oktaConfiguration: OktaConfiguration,
@@ -60,7 +55,7 @@ export default (
 }> =>
   rootCommand.command(
     'delete-user [user-id]',
-    'Deletes the specified user. Only works if user status is deprovisioned',
+    'Deletes the specified user. Only works if user status is deprovisioned.',
     // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => {
       // eslint-disable-next-line functional/no-expression-statement
