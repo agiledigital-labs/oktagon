@@ -1,45 +1,45 @@
-import { CreateUserRequestOptions } from '@okta/okta-sdk-nodejs';
 import { Argv } from 'yargs';
 import { RootCommand } from '..';
 import { generate } from 'generate-password';
 
-import { oktaUserAsUser, User, getUser } from './services/user-service';
-import { oktaManageClient, OktaConfiguration } from './services/client-service';
+import { User, UserService, OktaUserService } from './services/user-service';
+import { oktaManageClient } from './services/client-service';
 
-const createUser = async (
-  oktaConfiguration: OktaConfiguration,
+import * as TE from 'fp-ts/lib/TaskEither';
+import * as E from 'fp-ts/lib/Either';
+import * as O from 'fp-ts/lib/Option';
+import { pipe, flow } from 'fp-ts/lib/function';
+import * as Console from 'fp-ts/lib/Console';
+
+const createUser = (
+  service: UserService,
   password: string,
   email: string,
   firstName: string,
   lastName: string
-): Promise<User> => {
-  const client = oktaManageClient(oktaConfiguration);
-
-  const maybeOktaUser = await getUser(email, client);
-  const newUser: CreateUserRequestOptions = {
-    profile: {
-      firstName: firstName,
-      lastName: lastName,
-      email: email,
-      login: email,
-    },
-    credentials: {
-      password: { value: password },
-    },
-  };
-
-  // eslint-disable-next-line functional/functional-parameters
-  const throwOnExisting = () => {
-    // eslint-disable-next-line functional/no-throw-statement
-    throw new Error(
-      `User [${email}] already exists. Can not create a new user.`
-    );
-  };
-
-  return maybeOktaUser === undefined
-    ? oktaUserAsUser(await client.createUser(newUser))
-    : throwOnExisting();
-};
+): TE.TaskEither<string, User> =>
+  pipe(
+    email,
+    service.getUser,
+    TE.chain(
+      flow(
+        O.fold(
+          // eslint-disable-next-line functional/functional-parameters
+          () => service.createUser(email, firstName, lastName, password),
+          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+          (user) =>
+            TE.left(
+              `User [${email}] already exists with id [${user.id}]. Can not create a new user.`
+            )
+        )
+      )
+    ),
+    TE.chainFirstIOK((user) =>
+      Console.info(
+        `Created new user with login [${user.login}] and name [${user.name}].\nPassword: [${password}]`
+      )
+    )
+  );
 
 export default (
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
@@ -90,44 +90,30 @@ export default (
       readonly lastName: string;
       // eslint-disable-next-line @typescript-eslint/require-await
     }) => {
-      // eslint-disable-next-line functional/no-try-statement
-      try {
-        const password = String(
-          generate({
-            length: 10,
-            numbers: true,
-            symbols: true,
-            strict: true,
-          })
-        );
+      const password = String(
+        generate({
+          length: 10,
+          numbers: true,
+          symbols: true,
+          strict: true,
+        })
+      );
 
-        const user = await createUser(
-          {
-            ...args,
-          },
-          password,
-          args.email,
-          args.firstName,
-          args.lastName
-        );
-        // eslint-disable-next-line functional/no-expression-statement
-        console.info(
-          `Created new user with login [${user.login}] and name [${user.name}].\nPassword: [${password}]`
-        );
-      } catch (error: unknown) {
+      const client = oktaManageClient({ ...args });
+      const service = new OktaUserService(client);
+
+      const result = await createUser(
+        service,
+        password,
+        args.email,
+        args.firstName,
+        args.lastName
+      )();
+
+      // eslint-disable-next-line functional/no-conditional-statement
+      if (E.isLeft(result)) {
         // eslint-disable-next-line functional/no-throw-statement
-        throw error instanceof Error
-          ? new Error(
-              `Failed to create new user [${args.email}] in [${args.organisationUrl}].`,
-              {
-                cause: error,
-              }
-            )
-          : new Error(
-              `Failed to create new user [${args.email}] in [${
-                args.organisationUrl
-              }] because of [${JSON.stringify(error)}].`
-            );
+        throw new Error(result.left);
       }
     }
   );

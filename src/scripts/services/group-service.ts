@@ -1,4 +1,6 @@
 import * as okta from '@okta/okta-sdk-nodejs';
+import * as TE from 'fp-ts/lib/TaskEither';
+import * as O from 'fp-ts/lib/Option';
 
 /**
  * Subset of Group information provided by Okta. See okta.Group for further information on it's derived type.
@@ -30,21 +32,41 @@ export const oktaGroupAsGroup = (oktaGroup: okta.Group): Group => ({
   type: oktaGroup.type,
 });
 
-/**
- * Retrieves a group's details from Okta
- * @param groupId the id of the group whose details should be retrieved.
- * @param client the client that should be used to retrieve the details.
- * @returns either the group details or undefined if that group does not exist.
- */
-export const getGroup = async (
-  groupId: string,
+// eslint-disable-next-line functional/no-class
+export class OktaGroupService {
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-  client: okta.Client
-): Promise<okta.Group | undefined> => {
-  return client.getGroup(groupId).catch((error) => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    return typeof error === 'object' && error.status === 404
-      ? Promise.resolve(undefined)
-      : Promise.reject(error);
-  });
+  constructor(private readonly client: okta.Client) {}
+
+  /**
+   * Retrieves a group's details from Okta
+   * @param groupId the id of the group whose details should be retrieved.
+   * @param client the client that should be used to retrieve the details.
+   * @returns either the group details or undefined if that group does not exist.
+   */
+  readonly getGroup = (
+    groupId: string
+  ): TE.TaskEither<string, O.Option<Group>> =>
+    TE.tryCatch(
+      // eslint-disable-next-line functional/functional-parameters
+      () =>
+        // eslint-disable-next-line functional/no-this-expression
+        this.client
+          .getGroup(groupId)
+          .then(oktaGroupAsGroup)
+          .then(O.some)
+          .catch((error) => {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            return typeof error === 'object' && error.status === 404
+              ? Promise.resolve(O.none)
+              : Promise.reject(error);
+          }),
+      (error: unknown) =>
+        `Failed fetching group details for [${groupId}] because of [${JSON.stringify(
+          error
+        )}]`
+    );
+}
+
+export type GroupService = {
+  readonly getGroup: OktaGroupService['getGroup'];
 };

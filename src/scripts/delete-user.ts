@@ -1,48 +1,41 @@
-import { UserStatus, User as OktaUser } from '@okta/okta-sdk-nodejs';
+import { UserStatus } from '@okta/okta-sdk-nodejs';
 import { Argv } from 'yargs';
 import { RootCommand } from '..';
 
-import { oktaUserAsUser, User, getUser } from './services/user-service';
-import { oktaManageClient, OktaConfiguration } from './services/client-service';
+import { UserService, OktaUserService } from './services/user-service';
+import { oktaManageClient } from './services/client-service';
+import * as TE from 'fp-ts/lib/TaskEither';
+import * as E from 'fp-ts/lib/Either';
+import * as O from 'fp-ts/lib/Option';
+import { flow, pipe } from 'fp-ts/lib/function';
+import * as Console from 'fp-ts/lib/Console';
 
-const deleteUser = async (
-  oktaConfiguration: OktaConfiguration,
+const deleteUser = (
+  service: UserService,
   userId: string
-): Promise<User> => {
-  const client = oktaManageClient(oktaConfiguration);
-
-  const maybeOktaUser = await getUser(userId, client);
-
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-  const performDelete = async (oktaUser: OktaUser) => {
-    // eslint-disable-next-line functional/no-expression-statement
-    await oktaUser.delete({
-      sendEmail: false,
-    });
-
-    return oktaUserAsUser(oktaUser);
-  };
-
-  // eslint-disable-next-line functional/functional-parameters
-  const throwOnNotDeprovisioned = () => {
-    // eslint-disable-next-line functional/no-throw-statement
-    throw new Error(
-      `User [${userId}] has not been deprovisioned. Deprovision before deleting.`
-    );
-  };
-
-  // eslint-disable-next-line functional/functional-parameters
-  const throwOnMissing = () => {
-    // eslint-disable-next-line functional/no-throw-statement
-    throw new Error(`User [${userId}] does not exist. Can not delete.`);
-  };
-
-  return maybeOktaUser === undefined
-    ? throwOnMissing()
-    : maybeOktaUser.status === UserStatus.DEPROVISIONED
-    ? performDelete(maybeOktaUser)
-    : throwOnNotDeprovisioned();
-};
+): TE.TaskEither<string, unknown> =>
+  pipe(
+    userId,
+    service.getUser,
+    TE.chain(
+      flow(
+        O.fold(
+          // eslint-disable-next-line functional/functional-parameters
+          () => TE.left(`User [${userId}] does not exist. Can not delete.`),
+          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+          (user) =>
+            user.status === UserStatus.DEPROVISIONED
+              ? service.deleteUser(userId)
+              : TE.left(
+                  `User [${userId}] has not been deprovisioned. Deprovision before deleting.`
+                )
+        )
+      )
+    ),
+    TE.chainFirstIOK((user) =>
+      Console.info(`Deleted [${user.id}] [${user.email}].`)
+    )
+  );
 
 export default (
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
@@ -72,29 +65,16 @@ export default (
       readonly userId: string;
     }) => {
       // eslint-disable-next-line functional/no-try-statement
-      try {
-        const user = await deleteUser(
-          {
-            ...args,
-          },
-          args.userId
-        );
-        // eslint-disable-next-line functional/no-expression-statement
-        console.info(`Deleted [${user.id}] [${user.email}].`);
-      } catch (error: unknown) {
+
+      const client = oktaManageClient({ ...args });
+      const service = new OktaUserService(client);
+
+      const result = await deleteUser(service, args.userId)();
+
+      // eslint-disable-next-line functional/no-conditional-statement
+      if (E.isLeft(result)) {
         // eslint-disable-next-line functional/no-throw-statement
-        throw error instanceof Error
-          ? new Error(
-              `Failed to delete user [${args.userId}] in [${args.organisationUrl}].`,
-              {
-                cause: error,
-              }
-            )
-          : new Error(
-              `Failed to delete user [${args.userId}] in [${
-                args.organisationUrl
-              }] because of [${JSON.stringify(error)}].`
-            );
+        throw new Error(result.left);
       }
     }
   );

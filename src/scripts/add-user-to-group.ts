@@ -2,20 +2,36 @@ import { Argv } from 'yargs';
 import { RootCommand } from '..';
 import { Response } from 'node-fetch';
 
-import { getUser } from './services/user-service';
-import { getGroup } from './services/group-service';
+import { UserService } from './services/user-service';
+import { GroupService } from './services/group-service';
 import { oktaManageClient, OktaConfiguration } from './services/client-service';
+import * as TE from 'fp-ts/lib/TaskEither';
+import * as E from 'fp-ts/lib/Either';
+import * as O from 'fp-ts/lib/Option';
+import { flow, pipe } from 'fp-ts/lib/function';
+import * as Console from 'fp-ts/lib/Console';
 
 // There is no suitable way to check and confirm that a user exists/does not exist within a particular group outside of
 // searching for them in a large array of users. So to preserve a timewise nature. it is best to just let commands work
 // even if it didn't do anything.
 
 const addUserToGroup = async (
-  oktaConfiguration: OktaConfiguration,
+  userService: UserService,
+  groupService: GroupService,
   user: string,
   group: string
 ): Promise<Response> => {
-  const client = oktaManageClient(oktaConfiguration, ['groups', 'users']);
+  pipe(
+    user,
+    userService.getUser,
+    TE.chain((maybeUser) =>
+      pipe(
+        group,
+        groupService.getGroup,
+        TE.map()
+      )
+    )
+  )
 
   const maybeOktaUser = await getUser(user, client);
   const maybeOktaGroup = await getGroup(group, client);

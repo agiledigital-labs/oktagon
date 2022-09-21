@@ -2,42 +2,13 @@ import { Argv } from 'yargs';
 import { RootCommand } from '..';
 
 import { table } from 'table';
-import { oktaUserAsUser, User } from './services/user-service';
-import {
-  oktaReadOnlyClient,
-  OktaConfiguration,
-} from './services/client-service';
+import { OktaUserService, User, UserService } from './services/user-service';
+import { oktaReadOnlyClient } from './services/client-service';
 
-/**
- * Gets a list of users given a set of arguments relating to the client's information.
- *
- * @param oktaConfiguration configuration for the connection to the Okta API.
- * @returns the list of users.
- *
- */
-const fetchUsers = async (
-  oktaConfiguration: OktaConfiguration
-): Promise<readonly User[]> => {
-  const client = oktaReadOnlyClient(oktaConfiguration);
-
-  // We need to populate users with all of the client data so it can be
-  // returned. Okta's listUsers() function returns a custom collection that
-  // does not allow for any form of mapping, so array mutation is needed.
-
-  // eslint-disable-next-line functional/prefer-readonly-type
-  const users: User[] = [];
-
-  // eslint-disable-next-line functional/no-expression-statement
-  await client
-    .listUsers()
-    // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
-    .each((oktaUser) => {
-      // eslint-disable-next-line functional/immutable-data, functional/no-expression-statement
-      users.push(oktaUserAsUser(oktaUser));
-    });
-
-  return users;
-};
+import * as TE from 'fp-ts/lib/TaskEither';
+import * as E from 'fp-ts/lib/Either';
+import { pipe } from 'fp-ts/lib/function';
+import * as Console from 'fp-ts/lib/Console';
 
 /**
  * Tabulates user information for display.
@@ -64,6 +35,14 @@ const usersTable = (users: readonly User[]): string => {
   );
 };
 
+const users = (service: UserService) =>
+  pipe(
+    // eslint-disable-next-line functional/functional-parameters
+    service.listUsers(),
+    TE.map((users) => usersTable(users)),
+    TE.chainFirstIOK(Console.info)
+  );
+
 export default (
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   rootCommand: RootCommand
@@ -83,25 +62,15 @@ export default (
       readonly privateKey: string;
       readonly organisationUrl: string;
     }) => {
-      // eslint-disable-next-line functional/no-try-statement
-      try {
-        const users = await fetchUsers({
-          ...args,
-        });
-        const tabulated = usersTable(users);
-        // eslint-disable-next-line functional/no-expression-statement
-        console.info(tabulated);
-      } catch (error: unknown) {
+      const client = oktaReadOnlyClient({ ...args });
+      const service = new OktaUserService(client);
+
+      const result = await users(service)();
+
+      // eslint-disable-next-line functional/no-conditional-statement
+      if (E.isLeft(result)) {
         // eslint-disable-next-line functional/no-throw-statement
-        throw error instanceof Error
-          ? new Error(`Failed to fetch users from [${args.organisationUrl}].`, {
-              cause: error,
-            })
-          : new Error(
-              `Failed to fetch users from [${
-                args.organisationUrl
-              }] because of [${JSON.stringify(error)}].`
-            );
+        throw new Error(result.left);
       }
     }
   );
