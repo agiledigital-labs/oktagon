@@ -1,6 +1,7 @@
 import * as okta from '@okta/okta-sdk-nodejs';
 import * as TE from 'fp-ts/lib/TaskEither';
 import * as O from 'fp-ts/lib/Option';
+import { Response } from 'node-fetch';
 
 /**
  * Subset of Group information provided by Okta. See okta.Group for further information on it's derived type.
@@ -65,8 +66,79 @@ export class OktaGroupService {
           error
         )}]`
     );
+
+  readonly addUserToGroup = (
+    groupId: string,
+    userId: string
+  ): TE.TaskEither<string, Response> =>
+    TE.tryCatch(
+      // eslint-disable-next-line functional/functional-parameters
+      () =>
+        // eslint-disable-next-line functional/no-this-expression
+        this.client
+          .getUser(userId)
+          // eslint-disable-next-line
+          .then((user: okta.User) => user.addToGroup(groupId)),
+      (error: unknown) =>
+        `Failed to add user [${userId}] to group [${groupId}] because of [${JSON.stringify(
+          error
+        )}].`
+    );
+
+  readonly removeUserFromGroup = (
+    groupId: string,
+    userId: string
+  ): TE.TaskEither<string, Response> =>
+    TE.tryCatch(
+      // eslint-disable-next-line functional/functional-parameters
+      () =>
+        // eslint-disable-next-line functional/no-this-expression
+        this.client
+          .getGroup(groupId)
+          // eslint-disable-next-line
+            .then((group: okta.Group) => group.removeUser(userId)),
+      (error: unknown) =>
+        `Failed to remove user [${userId}] to group [${groupId}] because of [${JSON.stringify(
+          error
+        )}].`
+    );
+
+  // eslint-disable-next-line functional/functional-parameters
+  readonly listGroups = (): TE.TaskEither<string, readonly Group[]> => {
+    // We need to populate groups with all of the client data so it can be
+    // returned. Okta's listGroups() function returns a custom collection that
+    // does not allow for any form of mapping, so array mutation is needed.
+
+    return TE.tryCatch(
+      // eslint-disable-next-line functional/functional-parameters
+      () => {
+        // eslint-disable-next-line functional/prefer-readonly-type
+        const groups: Group[] = [];
+
+        return (
+          // eslint-disable-next-line functional/no-this-expression
+          this.client
+            .listGroups()
+            // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+            .each((oktaGroup) => {
+              // eslint-disable-next-line functional/immutable-data
+              return groups.push(oktaGroupAsGroup(oktaGroup));
+            })
+            // eslint-disable-next-line functional/functional-parameters
+            .then(() => {
+              return groups;
+            })
+        );
+      },
+      (error: unknown) =>
+        `Failed to list groups because of [${JSON.stringify(error)}].`
+    );
+  };
 }
 
 export type GroupService = {
   readonly getGroup: OktaGroupService['getGroup'];
+  readonly addUserToGroup: OktaGroupService['addUserToGroup'];
+  readonly removeUserFromGroup: OktaGroupService['removeUserFromGroup'];
+  readonly listGroups: OktaGroupService['listGroups'];
 };
