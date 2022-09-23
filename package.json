@@ -38,7 +38,7 @@
     "eslint": "8.23.1",
     "eslint-config-prettier": "8.5.0",
     "eslint-config-typed-fp": "3.3.0",
-    "eslint-plugin-functional": "4.2.2",
+    "eslint-plugin-functional": "4.4.0",
     "eslint-plugin-import": "2.26.0",
     "eslint-plugin-jest": "26.8.7",
     "eslint-plugin-jsdoc": "39.3.6",
