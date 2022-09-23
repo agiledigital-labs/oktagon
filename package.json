@@ -16,7 +16,7 @@
     "mutation-test": "stryker run"
   },
   "dependencies": {
-    "@okta/okta-auth-js": "^6.7.6",
+    "@okta/okta-auth-js": "^7.0.0",
     "@okta/okta-sdk-nodejs": "^6.5.0",
     "@types/node-fetch": "^2.6.2",
     "chalk-table": "^1.0.2",
