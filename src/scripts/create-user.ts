@@ -7,7 +7,8 @@ import { oktaManageClient } from './services/client-service';
 
 import * as TE from 'fp-ts/lib/TaskEither';
 import * as E from 'fp-ts/lib/Either';
-import { pipe } from 'fp-ts/lib/function';
+import * as O from 'fp-ts/lib/Option';
+import { flow, pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
 
 const createUser = (
@@ -20,24 +21,22 @@ const createUser = (
   pipe(
     email,
     service.getUser,
-    TE.chain((maybeUser) =>
-      pipe(
-        service.validateUserExists(maybeUser, email),
-        // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-        (validated) =>
-          E.isLeft(validated)
-            ? service.createUser(email, firstName, lastName, password)
-            : TE.chain((user: User) =>
-                TE.left(
-                  `User [${email}] already exists with id [${user.id}]. Can not create a new user.`
-                )
-              )(TE.fromEither(validated))
+    TE.chain(
+      flow(
+        O.fold(
+          // eslint-disable-next-line functional/functional-parameters
+          () => service.createUser(email, firstName, lastName, password),
+          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+          (user) =>
+            TE.left(
+              `User [${email}] already exists with id [${user.id}]. Can not create a new user.`
+            )
+        )
       )
     ),
-    // eslint-disable-next-line functional/functional-parameters
     TE.chainFirstIOK((user) =>
       Console.info(
-        `Created new user with login [${user.login}], id [${user.id}], and name [${user.name}].\nPassword: [${password}]`
+        `Created new user with login [${user.login}] and name [${user.name}].\nPassword: [${password}]`
       )
     )
   );

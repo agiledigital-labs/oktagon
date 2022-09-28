@@ -5,7 +5,8 @@ import { OktaUserService, User, UserService } from './services/user-service';
 import { oktaManageClient } from './services/client-service';
 import * as TE from 'fp-ts/lib/TaskEither';
 import * as E from 'fp-ts/lib/Either';
-import { pipe } from 'fp-ts/lib/function';
+import * as O from 'fp-ts/lib/Option';
+import { flow, pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
 
 const deactivateUser = (
@@ -15,26 +16,25 @@ const deactivateUser = (
   pipe(
     userId,
     service.getUser,
-    TE.chain((maybeUser) =>
-      pipe(
-        service.validateUserExists(maybeUser, userId),
-        E.mapLeft(
+    TE.chain(
+      flow(
+        O.fold(
+          // eslint-disable-next-line functional/functional-parameters
+          () =>
+            TE.left(`User [${userId}] does not exist. Can not de-activate.`),
           // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          (errorArray) => `${errorArray[0]}. Cannot deactivate user.`
-        ),
-        TE.fromEither,
-        TE.chain((user) =>
-          service.isDeactivated(user)
-            ? TE.left(
-                `User [${userId}] is already deprovisioned. There is no need to deprovision it.`
-              )
-            : service.deleteUser(userId)
+          (user) =>
+            service.isDeactivated(user)
+              ? TE.right(user)
+              : service.deleteUser(userId)
         )
       )
     ),
-    // eslint-disable-next-line functional/functional-parameters
-    TE.chainFirstIOK((user) => Console.info(`Deactivated user [${user.id}].`))
+    TE.chainFirstIOK((user) =>
+      Console.info(`Deactivated [${user.id}] [${user.email}].`)
+    )
   );
+
 export default (
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   rootCommand: RootCommand

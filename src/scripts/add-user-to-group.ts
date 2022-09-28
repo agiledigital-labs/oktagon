@@ -2,6 +2,10 @@ import { Argv } from 'yargs';
 import { RootCommand } from '..';
 import { Response } from 'node-fetch';
 
+import {
+  validateUserExists,
+  validateGroupExists,
+} from './services/validation-service';
 import { UserService, OktaUserService } from './services/user-service';
 import { GroupService, OktaGroupService } from './services/group-service';
 import { oktaManageClient } from './services/client-service';
@@ -36,8 +40,8 @@ const addUserToGroup = (
         TE.chain((maybeGroup) =>
           pipe(
             A.sequenceT(applicativeValidation)(
-              groupService.validateGroupExists(maybeGroup, group),
-              userService.validateUserExists(maybeUser, user)
+              validateGroupExists(maybeGroup, group),
+              validateUserExists(maybeUser, user)
             ),
             E.mapLeft(
               // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
