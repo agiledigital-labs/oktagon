@@ -185,6 +185,9 @@ export class OktaUserService {
       // eslint-disable-next-line functional/functional-parameters
       E.fromOption(() => NEA.of(`User [${user}] does not exist`))
     );
+
+  readonly isDeactivated = (user: User): boolean =>
+    user.status === okta.UserStatus.DEPROVISIONED;
 }
 
 export type UserService = {
@@ -194,4 +197,5 @@ export type UserService = {
   readonly deleteUser: OktaUserService['deleteUser'];
   readonly deactivateUser: OktaUserService['deactivateUser'];
   readonly validateUserExists: OktaUserService['validateUserExists'];
+  readonly isDeactivated: OktaUserService['isDeactivated'];
 };

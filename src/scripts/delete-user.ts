@@ -1,4 +1,3 @@
-import { UserStatus } from '@okta/okta-sdk-nodejs';
 import { Argv } from 'yargs';
 import { RootCommand } from '..';
 
@@ -6,8 +5,7 @@ import { UserService, OktaUserService } from './services/user-service';
 import { oktaManageClient } from './services/client-service';
 import * as TE from 'fp-ts/lib/TaskEither';
 import * as E from 'fp-ts/lib/Either';
-import * as O from 'fp-ts/lib/Option';
-import { flow, pipe } from 'fp-ts/lib/function';
+import { pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
 
 const deleteUser = (
@@ -17,24 +15,23 @@ const deleteUser = (
   pipe(
     userId,
     service.getUser,
-    TE.chain(
-      flow(
-        O.fold(
-          // eslint-disable-next-line functional/functional-parameters
-          () => TE.left(`User [${userId}] does not exist. Can not delete.`),
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          (user) =>
-            user.status === UserStatus.DEPROVISIONED
-              ? service.deleteUser(userId)
-              : TE.left(
-                  `User [${userId}] has not been deprovisioned. Deprovision before deleting.`
-                )
+    TE.chain((maybeUser) =>
+      pipe(
+        service.validateUserExists(maybeUser, userId),
+        // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+        E.mapLeft((errorArray) => `${errorArray[0]}. Cannot delete user.`),
+        TE.fromEither,
+        TE.chain((user) =>
+          service.isDeactivated(user)
+            ? service.deleteUser(userId)
+            : TE.left(
+                `User [${userId}] has not been deprovisioned. Deprovision before deleting.`
+              )
         )
       )
     ),
-    TE.chainFirstIOK((user) =>
-      Console.info(`Deleted [${user.id}] [${user.email}].`)
-    )
+    // eslint-disable-next-line functional/functional-parameters
+    TE.chainFirstIOK((user) => Console.info(`Deleted user [${user.id}].`))
   );
 
 export default (

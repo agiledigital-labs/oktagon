@@ -26,41 +26,41 @@ const removeUserFromGroup = (
   user: string,
   group: string
 ): TE.TaskEither<string, Response> =>
-  TE.flatten(
-    pipe(
-      user,
-      userService.getUser,
-      TE.chain((maybeUser) =>
-        pipe(
-          group,
-          groupService.getGroup,
-          TE.map((maybeGroup) =>
-            pipe(
-              A.sequenceT(applicativeValidation)(
-                groupService.validateGroupExists(maybeGroup, group),
-                userService.validateUserExists(maybeUser, user)
-              ),
-              E.mapLeft(
-                // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-                (errors) =>
-                  `${errors.join('. ')}. Cannot remove user from group.`
-              ),
-              TE.fromEither,
+  pipe(
+    user,
+    userService.getUser,
+    TE.chain((maybeUser) =>
+      pipe(
+        group,
+        groupService.getGroup,
+        TE.chain((maybeGroup) =>
+          pipe(
+            A.sequenceT(applicativeValidation)(
+              groupService.validateGroupExists(maybeGroup, group),
+              userService.validateUserExists(maybeUser, user)
+            ),
+            E.mapLeft(
               // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-              TE.chain(([group, user]) => {
-                return groupService.removeUserFromGroup(group.id, user.id);
-              })
+              (errors) => `${errors.join('. ')}. Cannot remove user from group.`
+            ),
+            TE.fromEither,
+            // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+            TE.chain(([group, user]) =>
+              groupService.removeUserFromGroup(group.id, user.id)
             )
           )
         )
-      ),
-      // eslint-disable-next-line functional/functional-parameters
-      TE.chainFirstIOK(() =>
-        Console.info(`Removed user [${user}] from group [${group}].`)
+      )
+    ),
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+    TE.chainFirstIOK((response) =>
+      Console.info(
+        response.ok
+          ? `Removed user [${user}] from group [${group}].`
+          : `Something went wrong. [${JSON.stringify(response)}]`
       )
     )
   );
-
 export default (
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   rootCommand: RootCommand

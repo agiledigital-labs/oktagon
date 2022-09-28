@@ -26,40 +26,41 @@ const addUserToGroup = (
   user: string,
   group: string
 ): TE.TaskEither<string, Response> =>
-  TE.flatten(
-    pipe(
-      user,
-      userService.getUser,
-      TE.chain((maybeUser) =>
-        pipe(
-          group,
-          groupService.getGroup,
-          TE.map((maybeGroup) =>
-            pipe(
-              A.sequenceT(applicativeValidation)(
-                groupService.validateGroupExists(maybeGroup, group),
-                userService.validateUserExists(maybeUser, user)
-              ),
-              E.mapLeft(
-                // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-                (errors) => `${errors.join('. ')}. Cannot add user to group.`
-              ),
-              TE.fromEither,
+  pipe(
+    user,
+    userService.getUser,
+    TE.chain((maybeUser) =>
+      pipe(
+        group,
+        groupService.getGroup,
+        TE.chain((maybeGroup) =>
+          pipe(
+            A.sequenceT(applicativeValidation)(
+              groupService.validateGroupExists(maybeGroup, group),
+              userService.validateUserExists(maybeUser, user)
+            ),
+            E.mapLeft(
               // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-              TE.chain(([group, user]) => {
-                return groupService.addUserToGroup(group.id, user.id);
-              })
+              (errors) => `${errors.join('. ')}. Cannot add user to group.`
+            ),
+            TE.fromEither,
+            // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+            TE.chain(([group, user]) =>
+              groupService.addUserToGroup(group.id, user.id)
             )
           )
         )
-      ),
-      // eslint-disable-next-line functional/functional-parameters
-      TE.chainFirstIOK(() =>
-        Console.info(`Added user [${user}] to group [${group}].`)
+      )
+    ),
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+    TE.chainFirstIOK((response) =>
+      Console.info(
+        response.ok
+          ? `Added user [${user}] to group [${group}].`
+          : `Something went wrong. [${JSON.stringify(response)}]`
       )
     )
   );
-
 export default (
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   rootCommand: RootCommand
