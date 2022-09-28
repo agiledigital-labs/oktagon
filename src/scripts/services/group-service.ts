@@ -2,6 +2,9 @@ import * as okta from '@okta/okta-sdk-nodejs';
 import * as TE from 'fp-ts/lib/TaskEither';
 import * as O from 'fp-ts/lib/Option';
 import { Response } from 'node-fetch';
+import * as NEA from 'fp-ts/NonEmptyArray';
+import * as E from 'fp-ts/lib/Either';
+import { pipe } from 'fp-ts/lib/function';
 
 /**
  * Subset of Group information provided by Okta. See okta.Group for further information on it's derived type.
@@ -134,6 +137,16 @@ export class OktaGroupService {
         `Failed to list groups because of [${JSON.stringify(error)}].`
     );
   };
+
+  readonly validateGroupExists = (
+    maybeGroup: O.Option<Group>,
+    group = 'undefined'
+  ): E.Either<NEA.NonEmptyArray<string>, Group> =>
+    pipe(
+      maybeGroup,
+      // eslint-disable-next-line functional/functional-parameters
+      E.fromOption(() => NEA.of(`Group [${group}] does not exist`))
+    );
 }
 
 export type GroupService = {
@@ -141,4 +154,5 @@ export type GroupService = {
   readonly addUserToGroup: OktaGroupService['addUserToGroup'];
   readonly removeUserFromGroup: OktaGroupService['removeUserFromGroup'];
   readonly listGroups: OktaGroupService['listGroups'];
+  readonly validateGroupExists: OktaGroupService['validateGroupExists'];
 };

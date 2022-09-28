@@ -7,9 +7,14 @@ import { GroupService, OktaGroupService } from './services/group-service';
 import { oktaManageClient } from './services/client-service';
 import * as TE from 'fp-ts/lib/TaskEither';
 import * as E from 'fp-ts/lib/Either';
-import * as O from 'fp-ts/lib/Option';
 import { pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
+import * as A from 'fp-ts/lib/Apply';
+import * as NEA from 'fp-ts/NonEmptyArray';
+
+const applicativeValidation = E.getApplicativeValidation(
+  NEA.getSemigroup<string>()
+);
 
 // There is no suitable way to check and confirm that a user exists/does not exist within a particular group outside of
 // searching for them in a large array of users. So to preserve a timewise nature. it is best to just let commands work
@@ -30,21 +35,28 @@ const removeUserFromGroup = (
           group,
           groupService.getGroup,
           TE.map((maybeGroup) =>
-            O.isNone(maybeUser)
-              ? TE.left(
-                  `User [${user}] does not exist. Can not add user to group.`
-                )
-              : O.isNone(maybeGroup)
-              ? TE.left(
-                  `Group [${group}] does not exist. Can not add user to group.`
-                )
-              : groupService.removeUserFromGroup(group, user)
+            pipe(
+              A.sequenceT(applicativeValidation)(
+                groupService.validateGroupExists(maybeGroup, group),
+                userService.validateUserExists(maybeUser, user)
+              ),
+              E.mapLeft(
+                // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+                (errors) =>
+                  `${errors.join('. ')}. Cannot remove user from group.`
+              ),
+              TE.fromEither,
+              // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+              TE.chain(([group, user]) => {
+                return groupService.removeUserFromGroup(group.id, user.id);
+              })
+            )
           )
         )
       ),
       // eslint-disable-next-line functional/functional-parameters
       TE.chainFirstIOK(() =>
-        Console.info(`Removed user [${user}] to group [${group}].`)
+        Console.info(`Removed user [${user}] from group [${group}].`)
       )
     )
   );

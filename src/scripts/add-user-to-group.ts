@@ -2,20 +2,14 @@ import { Argv } from 'yargs';
 import { RootCommand } from '..';
 import { Response } from 'node-fetch';
 
-import { UserService, OktaUserService, User } from './services/user-service';
-import {
-  Group,
-  GroupService,
-  OktaGroupService,
-} from './services/group-service';
+import { UserService, OktaUserService } from './services/user-service';
+import { GroupService, OktaGroupService } from './services/group-service';
 import { oktaManageClient } from './services/client-service';
 import * as TE from 'fp-ts/lib/TaskEither';
 import * as E from 'fp-ts/lib/Either';
-import * as O from 'fp-ts/lib/Option';
 import { pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
 import * as A from 'fp-ts/lib/Apply';
-
 import * as NEA from 'fp-ts/NonEmptyArray';
 
 const applicativeValidation = E.getApplicativeValidation(
@@ -31,30 +25,8 @@ const addUserToGroup = (
   groupService: GroupService,
   user: string,
   group: string
-): TE.TaskEither<string, Response> => {
-  const validateGroupExists = (
-    maybeGroup: O.Option<Group>
-  ): E.Either<NEA.NonEmptyArray<string>, Group> =>
-    pipe(
-      maybeGroup,
-      // eslint-disable-next-line functional/functional-parameters
-      E.fromOption(() =>
-        NEA.of(`Group [${group}] does not exist, can not add user to group`)
-      )
-    );
-
-  const validateUserExists = (
-    maybeUser: O.Option<User>
-  ): E.Either<NEA.NonEmptyArray<string>, User> =>
-    pipe(
-      maybeUser,
-      // eslint-disable-next-line functional/functional-parameters
-      E.fromOption(() =>
-        NEA.of(`User [${user}] does not exist, can not add user to group`)
-      )
-    );
-
-  return TE.flatten(
+): TE.TaskEither<string, Response> =>
+  TE.flatten(
     pipe(
       user,
       userService.getUser,
@@ -65,11 +37,13 @@ const addUserToGroup = (
           TE.map((maybeGroup) =>
             pipe(
               A.sequenceT(applicativeValidation)(
-                validateGroupExists(maybeGroup),
-                validateUserExists(maybeUser)
+                groupService.validateGroupExists(maybeGroup, group),
+                userService.validateUserExists(maybeUser, user)
               ),
-              // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-              E.mapLeft((errors) => errors.join(',')),
+              E.mapLeft(
+                // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+                (errors) => `${errors.join('. ')}. Cannot add user to group.`
+              ),
               TE.fromEither,
               // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
               TE.chain(([group, user]) => {
@@ -85,7 +59,6 @@ const addUserToGroup = (
       )
     )
   );
-};
 
 export default (
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types

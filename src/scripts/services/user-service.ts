@@ -1,6 +1,9 @@
 import * as okta from '@okta/okta-sdk-nodejs';
 import * as TE from 'fp-ts/lib/TaskEither';
 import * as O from 'fp-ts/lib/Option';
+import * as NEA from 'fp-ts/NonEmptyArray';
+import * as E from 'fp-ts/lib/Either';
+import { pipe } from 'fp-ts/lib/function';
 
 /**
  * Subset of User information provided by Okta. See okta.User for further information on it's derived type.
@@ -172,6 +175,16 @@ export class OktaUserService {
           error
         )}].`
     );
+
+  readonly validateUserExists = (
+    maybeUser: O.Option<User>,
+    user = 'undefined'
+  ): E.Either<NEA.NonEmptyArray<string>, User> =>
+    pipe(
+      maybeUser,
+      // eslint-disable-next-line functional/functional-parameters
+      E.fromOption(() => NEA.of(`User [${user}] does not exist`))
+    );
 }
 
 export type UserService = {
@@ -180,4 +193,5 @@ export type UserService = {
   readonly getUser: OktaUserService['getUser'];
   readonly deleteUser: OktaUserService['deleteUser'];
   readonly deactivateUser: OktaUserService['deactivateUser'];
+  readonly validateUserExists: OktaUserService['validateUserExists'];
 };
