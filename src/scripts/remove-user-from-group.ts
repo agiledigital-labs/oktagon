@@ -1,6 +1,5 @@
 import { Argv } from 'yargs';
 import { RootCommand } from '..';
-import { Response } from 'node-fetch';
 
 import {
   validateUserExists,
@@ -29,7 +28,7 @@ const removeUserFromGroup = (
   groupService: GroupService,
   user: string,
   group: string
-): TE.TaskEither<string, Response> =>
+): TE.TaskEither<string, string> =>
   pipe(
     user,
     userService.getUser,
@@ -50,20 +49,14 @@ const removeUserFromGroup = (
             TE.fromEither,
             // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
             TE.chain(([group, user]) =>
-              groupService.removeUserFromGroup(group.id, user.id)
+              groupService.removeUserFromGroup(user.id, group.id)
             )
           )
         )
       )
     ),
     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-    TE.chainFirstIOK((response) =>
-      Console.info(
-        response.ok
-          ? `Removed user [${user}] from group [${group}].`
-          : `Something went wrong. [${JSON.stringify(response)}]`
-      )
-    )
+    TE.chainFirstIOK((response) => Console.info(response))
   );
 export default (
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types

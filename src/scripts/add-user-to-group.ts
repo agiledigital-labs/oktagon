@@ -1,6 +1,5 @@
 import { Argv } from 'yargs';
 import { RootCommand } from '..';
-import { Response } from 'node-fetch';
 
 import {
   validateUserExists,
@@ -24,12 +23,12 @@ const applicativeValidation = E.getApplicativeValidation(
 // searching for them in a large array of users. So to preserve a timewise nature. it is best to just let commands work
 // even if it didn't do anything.
 
-const addUserToGroup = (
+export const addUserToGroup = (
   userService: UserService,
   groupService: GroupService,
   user: string,
   group: string
-): TE.TaskEither<string, Response> =>
+): TE.TaskEither<string, string> =>
   pipe(
     user,
     userService.getUser,
@@ -50,20 +49,14 @@ const addUserToGroup = (
             TE.fromEither,
             // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
             TE.chain(([group, user]) =>
-              groupService.addUserToGroup(group.id, user.id)
+              groupService.addUserToGroup(user.id, group.id)
             )
           )
         )
       )
     ),
     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-    TE.chainFirstIOK((response) =>
-      Console.info(
-        response.ok
-          ? `Added user [${user}] to group [${group}].`
-          : `Something went wrong. [${JSON.stringify(response)}]`
-      )
-    )
+    TE.chainFirstIOK((response) => Console.info(response))
   );
 export default (
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types

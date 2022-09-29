@@ -1,7 +1,7 @@
 import * as okta from '@okta/okta-sdk-nodejs';
 import * as TE from 'fp-ts/lib/TaskEither';
 import * as O from 'fp-ts/lib/Option';
-import { Response } from 'node-fetch';
+import { pipe } from 'fp-ts/lib/function';
 
 /**
  * Subset of Group information provided by Okta. See okta.Group for further information on it's derived type.
@@ -68,39 +68,55 @@ export class OktaGroupService {
     );
 
   readonly addUserToGroup = (
-    groupId: string,
-    userId: string
-  ): TE.TaskEither<string, Response> =>
-    TE.tryCatch(
-      // eslint-disable-next-line functional/functional-parameters
-      () =>
-        // eslint-disable-next-line functional/no-this-expression
-        this.client
-          .getUser(userId)
-          // eslint-disable-next-line
+    userId: string,
+    groupId: string
+  ): TE.TaskEither<string, string> =>
+    pipe(
+      TE.tryCatch(
+        // eslint-disable-next-line functional/functional-parameters
+        () =>
+          // eslint-disable-next-line functional/no-this-expression
+          this.client
+            .getUser(userId)
+            // eslint-disable-next-line
           .then((user: okta.User) => user.addToGroup(groupId)),
-      (error: unknown) =>
-        `Failed to add user [${userId}] to group [${groupId}] because of [${JSON.stringify(
-          error
-        )}].`
+        (error: unknown) =>
+          `Failed to add user [${userId}] to group [${groupId}] because of [${JSON.stringify(
+            error
+          )}].`
+      ),
+      // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+      TE.chain((response) =>
+        response.ok
+          ? TE.right(`Added user [${userId}] to group [${groupId}].`)
+          : TE.left(`Something went wrong. [${JSON.stringify(response)}]`)
+      )
     );
 
   readonly removeUserFromGroup = (
-    groupId: string,
-    userId: string
-  ): TE.TaskEither<string, Response> =>
-    TE.tryCatch(
-      // eslint-disable-next-line functional/functional-parameters
-      () =>
-        // eslint-disable-next-line functional/no-this-expression
-        this.client
-          .getGroup(groupId)
-          // eslint-disable-next-line
+    userId: string,
+    groupId: string
+  ): TE.TaskEither<string, string> =>
+    pipe(
+      TE.tryCatch(
+        // eslint-disable-next-line functional/functional-parameters
+        () =>
+          // eslint-disable-next-line functional/no-this-expression
+          this.client
+            .getGroup(groupId)
+            // eslint-disable-next-line
             .then((group: okta.Group) => group.removeUser(userId)),
-      (error: unknown) =>
-        `Failed to remove user [${userId}] to group [${groupId}] because of [${JSON.stringify(
-          error
-        )}].`
+        (error: unknown) =>
+          `Failed to remove user [${userId}] to group [${groupId}] because of [${JSON.stringify(
+            error
+          )}].`
+      ),
+      // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+      TE.chain((response) =>
+        response.ok
+          ? TE.right(`Added user [${userId}] to group [${groupId}].`)
+          : TE.left(`Something went wrong. [${JSON.stringify(response)}]`)
+      )
     );
 
   // eslint-disable-next-line functional/functional-parameters
