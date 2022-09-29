@@ -14,19 +14,6 @@ import { addUserToGroup } from '../scripts/add-user-to-group';
 import { Group, GroupService } from '../scripts/services/group-service';
 import { UserStatus } from '@okta/okta-sdk-nodejs';
 
-/*jest.mock('../scripts/services/user-service', () => {
-    const originalModule = jest.requireActual('../scripts/services/user-service');
-    
-    return {
-        _esModule: true,
-        ...originalModule,
-        User: { getUser: returnLeftTE }
-    };
-});
-
-const myMock = jest.fn();
-*/
-
 const returnLeftTE = (_string: string) => TE.left('An error occured');
 
 const user: User = {
@@ -59,35 +46,61 @@ const baseGroupService: GroupService = {
   removeUserFromGroup: returnLeftTE,
 };
 
+const baseGetUser = (
+  fail: boolean
+): ((id: string) => TE.TaskEither<string, O.Option<User>>) =>
+  fail ? returnLeftTE : (_id: string) => TE.right(O.some(user));
+
+const baseGetGroup = (
+  fail: boolean
+): ((id: string) => TE.TaskEither<string, O.Option<Group>>) =>
+  fail ? returnLeftTE : (_id: string) => TE.right(O.some(group));
+
+const baseAddUserToGroup = (
+  fail: boolean
+): ((id1: string, id2: string) => TE.TaskEither<string, string>) =>
+  fail ? returnLeftTE : (_groupId: string, _userId: string) => TE.right('blah');
+
 describe('Adding Users to Groups', () => {
-  it('Succeeds if the user and group exists', async () => {
-    // Given a user service can retrieve a user.
-    const userService: UserService = {
-      ...baseUserService,
-      getUser: (_userId: string) => TE.right(O.some(user)),
-    };
+  const convertToStatement = (str: string) =>
+    // eslint-disable-next-line prettier/prettier
+    str === 'true' ? 'doesn\'t exist' : 'exists';
 
-    // And a group service that can retrieve a group
-    const groupService: GroupService = {
-      ...baseGroupService,
-      getGroup: (_groupId: string) => TE.right(O.some(group)),
+  test.each([
+    [false, false],
+    [true, false],
+    [false, true],
+    [true, true],
+  ])(
+    `Call addUserToGroup given the user ${convertToStatement(
+      '%s'
+    )} and group ${convertToStatement('%s')}`,
+    async (userFail, groupFail) => {
+      // Given a user service can retrieve a user.
+      const userService: UserService = {
+        ...baseUserService,
+        getUser: baseGetUser(userFail),
+      };
 
-      addUserToGroup: (_groupId: string, _userId: string) =>
-        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-        TE.right('blah'),
-    };
+      // And a group service that can retrieve a group
+      const groupService: GroupService = {
+        ...baseGroupService,
+        getGroup: baseGetGroup(groupFail),
+        addUserToGroup: baseAddUserToGroup(false),
+      };
 
-    // When we add the user to the group.
-    const response = addUserToGroup(
-      userService,
-      groupService,
-      'userId',
-      'groupId'
-    );
+      // When we add the user to the group.
+      const response = addUserToGroup(
+        userService,
+        groupService,
+        'userId',
+        'groupId'
+      );
 
-    const result = await response();
+      const result = await response();
 
-    // Then we should have a right.
-    expect(result).toBeRight();
-  });
+      // Then we should have a right.
+      expect(result).toBeRight();
+    }
+  );
 });
