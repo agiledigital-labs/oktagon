@@ -61,6 +61,24 @@ const baseAddUserToGroup = (
 ): ((id1: string, id2: string) => TE.TaskEither<string, string>) =>
   fail ? returnLeftTE : (_groupId: string, _userId: string) => TE.right('blah');
 
+const createUserService = (fail: boolean): UserService => {
+  return {
+    ...baseUserService,
+    getUser: baseGetUser(fail),
+  };
+};
+
+const createGroupService = (
+  getFail: boolean,
+  addFail: boolean
+): GroupService => {
+  return {
+    ...baseGroupService,
+    getGroup: baseGetGroup(getFail),
+    addUserToGroup: baseAddUserToGroup(addFail),
+  };
+};
+
 describe('Adding Users to Groups', () => {
   const convertToStatement = (str: string) =>
     // eslint-disable-next-line prettier/prettier
@@ -68,27 +86,18 @@ describe('Adding Users to Groups', () => {
 
   it('Expected pass when calling addUserToGroup with an existing and valid user and group', async () => {
     // Given a user service can retrieve a user.
-    const userService: UserService = {
-      ...baseUserService,
-      getUser: baseGetUser(false),
-    };
+    const userService: UserService = createUserService(false);
 
     // And a group service that can retrieve a group
-    const groupService: GroupService = {
-      ...baseGroupService,
-      getGroup: baseGetGroup(false),
-      addUserToGroup: baseAddUserToGroup(false),
-    };
+    const groupService: GroupService = createGroupService(false, false);
 
     // When we add the user to the group.
-    const response = addUserToGroup(
+    const result = await addUserToGroup(
       userService,
       groupService,
       'userId',
       'groupId'
-    );
-
-    const result = await response();
+    )();
 
     // Then we should have a right.
     expect(result).toBeRight();
@@ -110,27 +119,21 @@ describe('Adding Users to Groups', () => {
     )}, and addUserToGroup subroutine ${convertToStatement('%s')}`,
     async (userFail, groupFail, addUserFail) => {
       // Given a user service can retrieve a user.
-      const userService: UserService = {
-        ...baseUserService,
-        getUser: baseGetUser(userFail),
-      };
+      const userService: UserService = createUserService(userFail);
 
       // And a group service that can retrieve a group
-      const groupService: GroupService = {
-        ...baseGroupService,
-        getGroup: baseGetGroup(groupFail),
-        addUserToGroup: baseAddUserToGroup(addUserFail),
-      };
+      const groupService: GroupService = createGroupService(
+        groupFail,
+        addUserFail
+      );
 
       // When we add the user to the group.
-      const response = addUserToGroup(
+      const result = await addUserToGroup(
         userService,
         groupService,
         'userId',
         'groupId'
-      );
-
-      const result = await response();
+      )();
 
       // Then we should have a left.
       expect(result).toBeLeft();
