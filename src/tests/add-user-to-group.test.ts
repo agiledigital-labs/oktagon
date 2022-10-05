@@ -64,18 +64,51 @@ const baseAddUserToGroup = (
 describe('Adding Users to Groups', () => {
   const convertToStatement = (str: string) =>
     // eslint-disable-next-line prettier/prettier
-    str === 'true' ? 'doesn\'t exist' : 'exists';
+    str === 'true' ? 'isn\'t valid/doesn\'t exist' : 'is valid/exists';
+
+  it('Expected pass when calling addUserToGroup with an existing and valid user and group', async () => {
+    // Given a user service can retrieve a user.
+    const userService: UserService = {
+      ...baseUserService,
+      getUser: baseGetUser(true),
+    };
+
+    // And a group service that can retrieve a group
+    const groupService: GroupService = {
+      ...baseGroupService,
+      getGroup: baseGetGroup(true),
+      addUserToGroup: baseAddUserToGroup(true),
+    };
+
+    // When we add the user to the group.
+    const response = addUserToGroup(
+      userService,
+      groupService,
+      'userId',
+      'groupId'
+    );
+
+    const result = await response();
+
+    // Then we should have a right.
+    expect(result).toBeRight();
+  });
 
   test.each([
-    [false, false],
-    [true, false],
-    [false, true],
-    [true, true],
+    [true, true, true],
+    [true, false, true],
+    [false, true, true],
+    [true, true, false],
+    [true, false, false],
+    [false, true, false],
+    [false, false, true],
   ])(
-    `Call addUserToGroup given the user ${convertToStatement(
+    `Expected fail when calling addUserToGroup given the user ${convertToStatement(
       '%s'
-    )} and group ${convertToStatement('%s')}`,
-    async (userFail, groupFail) => {
+    )}, group ${convertToStatement(
+      '%s'
+    )}, and addUserToGroup subroutine ${convertToStatement('%s')}`,
+    async (userFail, groupFail, addUserFail) => {
       // Given a user service can retrieve a user.
       const userService: UserService = {
         ...baseUserService,
@@ -86,7 +119,7 @@ describe('Adding Users to Groups', () => {
       const groupService: GroupService = {
         ...baseGroupService,
         getGroup: baseGetGroup(groupFail),
-        addUserToGroup: baseAddUserToGroup(false),
+        addUserToGroup: baseAddUserToGroup(addUserFail),
       };
 
       // When we add the user to the group.
@@ -99,8 +132,8 @@ describe('Adding Users to Groups', () => {
 
       const result = await response();
 
-      // Then we should have a right.
-      expect(result).toBeRight();
+      // Then we should have a left.
+      expect(result).toBeLeft();
     }
   );
 });
