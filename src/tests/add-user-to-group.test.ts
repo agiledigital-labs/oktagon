@@ -70,14 +70,14 @@ describe('Adding Users to Groups', () => {
     // Given a user service can retrieve a user.
     const userService: UserService = {
       ...baseUserService,
-      getUser: baseGetUser(true),
+      getUser: baseGetUser(false),
     };
 
     // And a group service that can retrieve a group
     const groupService: GroupService = {
       ...baseGroupService,
-      getGroup: baseGetGroup(true),
-      addUserToGroup: baseAddUserToGroup(true),
+      getGroup: baseGetGroup(false),
+      addUserToGroup: baseAddUserToGroup(false),
     };
 
     // When we add the user to the group.

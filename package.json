@@ -77,7 +77,10 @@
         "lines": 100,
         "statements": 100
       }
-    }
+    },
+    "setupFilesAfterEnv": [
+      "@relmify/jest-fp-ts"
+    ]
   },
   "repository": {
     "type": "git",
