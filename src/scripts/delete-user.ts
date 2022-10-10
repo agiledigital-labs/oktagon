@@ -23,7 +23,7 @@ const deleteUser = (
           () => TE.left(`User [${userId}] does not exist. Can not delete.`),
           // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
           (user) =>
-            service.isDeactivated(user)
+            user.deactivated
               ? service.deleteUser(userId)
               : TE.left(
                   `User [${userId}] has not been deprovisioned. Deprovision before deleting.`

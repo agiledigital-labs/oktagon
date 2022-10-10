@@ -16,6 +16,7 @@ const user: User = {
   email: 'test@localhost',
   name: 'test user',
   status: UserStatus.ACTIVE,
+  deactivated: false,
 };
 
 const group: Group = {
@@ -30,7 +31,6 @@ const baseUserService = (): UserService => ({
   deleteUser: returnLeftTE,
   deactivateUser: returnLeftTE,
   listUsers: returnLeftTE,
-  isDeactivated: () => true,
 });
 
 const baseGroupService = (): GroupService => ({
@@ -67,7 +67,7 @@ describe('Adding a user to a group', () => {
     expect(result).toEqualRight('group created');
 
     // And the user should have been added to the expected group
-    expect(groupService.addUserToGroup).toBeCalledWith('user_id', 'group_id');
+    expect(groupService.addUserToGroup).toBeCalledWith(user.id, group.id);
   });
 
   it('fails if the user does not exist', async () => {
@@ -171,7 +171,7 @@ describe('Adding a user to a group', () => {
     const groupService = {
       ...baseGroupService(),
       getGroup: () => TE.right(O.some(group)),
-      addUserToGroup: () => TE.left('failed to add user to group'),
+      addUserToGroup: jest.fn(() => TE.left('failed to add user to group')),
     };
 
     // When the user is added to the group
@@ -184,5 +184,8 @@ describe('Adding a user to a group', () => {
 
     // Then the request should have failed with the error from the group service.
     expect(result).toEqualLeft('failed to add user to group');
+
+    // But an attempt was made to add the user to the group.
+    expect(groupService.addUserToGroup).toBeCalledWith(user.id, group.id);
   });
 });

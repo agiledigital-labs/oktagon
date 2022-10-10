@@ -25,6 +25,10 @@ export type User = {
    * User status as a string.
    */
   readonly status: okta.UserStatus;
+  /**
+   * Whether the user is deactivated.
+   */
+  readonly deactivated: boolean;
 };
 
 /**
@@ -42,6 +46,7 @@ export const oktaUserAsUser = (oktaUser: okta.User): User => ({
     .filter((s) => s.length > 0)
     .join(' '),
   status: oktaUser.status,
+  deactivated: oktaUser.status === okta.UserStatus.DEPROVISIONED,
 });
 
 // eslint-disable-next-line functional/no-class
@@ -172,9 +177,6 @@ export class OktaUserService {
           error
         )}].`
     );
-
-  readonly isDeactivated = (user: User): boolean =>
-    user.status === okta.UserStatus.DEPROVISIONED;
 }
 
 export type UserService = {
@@ -183,5 +185,4 @@ export type UserService = {
   readonly getUser: OktaUserService['getUser'];
   readonly deleteUser: OktaUserService['deleteUser'];
   readonly deactivateUser: OktaUserService['deactivateUser'];
-  readonly isDeactivated: OktaUserService['isDeactivated'];
 };
