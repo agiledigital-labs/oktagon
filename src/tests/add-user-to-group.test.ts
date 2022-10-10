@@ -100,6 +100,34 @@ describe('Adding a user to a group', () => {
     expect(groupService.addUserToGroup).not.toHaveBeenCalled();
   });
 
+  it('fails if retrieving the user does fails', async () => {
+    // Given a user service that fails when finding the user.
+    const userService = {
+      ...baseUserService(),
+      getUser: () => TE.left('failed to get user'),
+    };
+
+    // And a group service that can find the group.
+    const groupService = {
+      ...baseGroupService(),
+      getGroup: () => TE.right(O.some(group)),
+    };
+
+    // When the user is added to the group
+    const result = await addUserToGroup(
+      userService,
+      groupService,
+      'userId',
+      'groupId'
+    )();
+
+    // Then the request should have failed because the call to get the user failed.
+    expect(result).toEqualLeft('failed to get user');
+
+    // And no attempt was made to add the user to the group.
+    expect(groupService.addUserToGroup).not.toHaveBeenCalled();
+  });
+
   it('fails if the group does not exist', async () => {
     // Given a user service that can locate the user.
     const userService = {
@@ -125,6 +153,34 @@ describe('Adding a user to a group', () => {
     expect(result).toEqualLeft(
       'Group [groupId] does not exist. Cannot add user to group.'
     );
+
+    // And no attempt was made to add the user to the group.
+    expect(groupService.addUserToGroup).not.toHaveBeenCalled();
+  });
+
+  it('fails if getting the group fails', async () => {
+    // Given a user service that can locate the user.
+    const userService = {
+      ...baseUserService(),
+      getUser: () => TE.right(O.some(user)),
+    };
+
+    // And a group service fails when finding the gruop.
+    const groupService = {
+      ...baseGroupService(),
+      getGroup: () => TE.left('failed to get group'),
+    };
+
+    // When the user is added to the group
+    const result = await addUserToGroup(
+      userService,
+      groupService,
+      'userId',
+      'groupId'
+    )();
+
+    // Then the request should have failed because the call to get the group failed.
+    expect(result).toEqualLeft('failed to get group');
 
     // And no attempt was made to add the user to the group.
     expect(groupService.addUserToGroup).not.toHaveBeenCalled();

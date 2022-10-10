@@ -7,7 +7,7 @@ import * as O from 'fp-ts/lib/Option';
 
 export const validateUserExists = (
   maybeUser: O.Option<User>,
-  user = 'undefined'
+  user: string
 ): E.Either<NEA.NonEmptyArray<string>, User> =>
   pipe(
     maybeUser,
@@ -17,7 +17,7 @@ export const validateUserExists = (
 
 export const validateGroupExists = (
   maybeGroup: O.Option<Group>,
-  group = 'undefined'
+  group: string
 ): E.Either<NEA.NonEmptyArray<string>, Group> =>
   pipe(
     maybeGroup,

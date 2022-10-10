@@ -12,7 +12,7 @@ import * as TE from 'fp-ts/lib/TaskEither';
 import * as E from 'fp-ts/lib/Either';
 import { pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
-import * as A from 'fp-ts/lib/Apply';
+import * as Ap from 'fp-ts/lib/Apply';
 import * as NEA from 'fp-ts/NonEmptyArray';
 
 const applicativeValidation = E.getApplicativeValidation(
@@ -30,34 +30,30 @@ export const addUserToGroup = (
   group: string
 ): TE.TaskEither<string, string> =>
   pipe(
-    user,
-    userService.getUser,
-    TE.chain((maybeUser) =>
+    // eslint-disable-next-line functional/functional-parameters
+    Ap.sequenceT(TE.ApplyPar)(
+      userService.getUser(user),
+      groupService.getGroup(group)
+    ),
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+    TE.chainEitherK(([maybeUser, maybeGroup]) =>
       pipe(
-        group,
-        groupService.getGroup,
-        TE.chain((maybeGroup) =>
-          pipe(
-            A.sequenceT(applicativeValidation)(
-              validateGroupExists(maybeGroup, group),
-              validateUserExists(maybeUser, user)
-            ),
-            E.mapLeft(
-              // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-              (errors) => `${errors.join('. ')}. Cannot add user to group.`
-            ),
-            TE.fromEither,
-            // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-            TE.chain(([group, user]) =>
-              groupService.addUserToGroup(user.id, group.id)
-            )
-          )
+        Ap.sequenceT(applicativeValidation)(
+          validateGroupExists(maybeGroup, group),
+          validateUserExists(maybeUser, user)
+        ),
+        E.mapLeft(
+          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+          (errors) => `${errors.join('. ')}. Cannot add user to group.`
         )
       )
     ),
     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+    TE.chain(([group, user]) => groupService.addUserToGroup(user.id, group.id)),
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
     TE.chainFirstIOK((response) => Console.info(response))
   );
+
 export default (
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   rootCommand: RootCommand
