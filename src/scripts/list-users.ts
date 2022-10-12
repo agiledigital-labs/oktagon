@@ -9,6 +9,7 @@ import * as TE from 'fp-ts/lib/TaskEither';
 import * as E from 'fp-ts/lib/Either';
 import { pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
+import { OktaGroupService, GroupService } from './services/group-service';
 
 /**
  * Tabulates user information for display.
@@ -43,6 +44,19 @@ const users = (service: UserService) =>
     TE.chainFirstIOK(Console.info)
   );
 
+const usersInGroup = (
+  userService: UserService,
+  groupService: GroupService,
+  groupId: string
+) =>
+  pipe(
+    groupService.getGroup(groupId),
+    // eslint-disable-next-line functional/functional-parameters
+    TE.chain(userService.listUsers),
+    TE.map((users) => usersTable(users)),
+    TE.chainFirstIOK(Console.info)
+  );
+
 export default (
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   rootCommand: RootCommand
@@ -50,22 +64,41 @@ export default (
   readonly clientId: string;
   readonly privateKey: string;
   readonly organisationUrl: string;
+  readonly groupId?: string;
 }> =>
   rootCommand.command(
     'list-users',
     // eslint-disable-next-line quotes
-    "Provides a list of all users' ID's, email addresses, display names, and statuses.",
-    // eslint-disable-next-line functional/no-return-void, functional/functional-parameters, @typescript-eslint/no-empty-function
-    () => {},
+    "Provides a list of all users' ID's, email addresses, display names, and statuses. Allows a specification of a group to list from.",
+    // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
+    (yargs) => {
+      // eslint-disable-next-line functional/no-expression-statement
+      yargs.positional('group', {
+        type: 'string',
+        alias: ['group-id'],
+        // eslint-disable-next-line quotes
+        describe: "The group's ID",
+      });
+    },
     async (args: {
       readonly clientId: string;
       readonly privateKey: string;
       readonly organisationUrl: string;
+      readonly groupId?: string;
     }) => {
-      const client = oktaReadOnlyClient({ ...args });
-      const service = new OktaUserService(client);
+      const client = oktaReadOnlyClient(
+        { ...args },
+        args.groupId === undefined ? ['users'] : ['users', 'groups']
+      );
+      const userService = new OktaUserService(client);
+      const groupService = new OktaGroupService(client);
 
-      const result = await users(service)();
+      // eslint-disable-next-line functional/no-expression-statement
+      Console.info(args.groupId);
+
+      const result = await (args.groupId === undefined
+        ? users(userService)
+        : usersInGroup(userService, groupService, args.groupId))();
 
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {
