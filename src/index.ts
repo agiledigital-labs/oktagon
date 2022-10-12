@@ -8,14 +8,15 @@ import yargs, { Argv } from 'yargs';
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace NodeJS {
-    // eslint-disable-next-line @typescript-eslint/consistent-type-definitions, functional/prefer-type-literal
+    // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
     interface Require {
+      // eslint-disable-next-line @typescript-eslint/prefer-function-type
       <T>(id: string): T;
     }
   }
 }
 
-// eslint-disable-next-line functional/no-return-void
+// eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
 type DefaultFunction = (rootCommand: RootCommand) => Argv<unknown>;
 
 /**
