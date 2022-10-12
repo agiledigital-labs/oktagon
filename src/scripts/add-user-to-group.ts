@@ -1,47 +1,58 @@
 import { Argv } from 'yargs';
 import { RootCommand } from '..';
-import { Response } from 'node-fetch';
 
-import { getUser } from './services/user-service';
-import { getGroup } from './services/group-service';
-import { oktaManageClient, OktaConfiguration } from './services/client-service';
+import {
+  validateUserExists,
+  validateGroupExists,
+} from './services/validation-service';
+import { UserService, OktaUserService } from './services/user-service';
+import { GroupService, OktaGroupService } from './services/group-service';
+import { oktaManageClient } from './services/client-service';
+import * as TE from 'fp-ts/lib/TaskEither';
+import * as E from 'fp-ts/lib/Either';
+import { pipe } from 'fp-ts/lib/function';
+import * as Console from 'fp-ts/lib/Console';
+import * as Ap from 'fp-ts/lib/Apply';
+import * as NEA from 'fp-ts/NonEmptyArray';
+
+const applicativeValidation = E.getApplicativeValidation(
+  NEA.getSemigroup<string>()
+);
 
 // There is no suitable way to check and confirm that a user exists/does not exist within a particular group outside of
 // searching for them in a large array of users. So to preserve a timewise nature. it is best to just let commands work
 // even if it didn't do anything.
 
-const addUserToGroup = async (
-  oktaConfiguration: OktaConfiguration,
+export const addUserToGroup = (
+  userService: UserService,
+  groupService: GroupService,
   user: string,
   group: string
-): Promise<Response> => {
-  const client = oktaManageClient(oktaConfiguration, ['groups', 'users']);
-
-  const maybeOktaUser = await getUser(user, client);
-  const maybeOktaGroup = await getGroup(group, client);
-
-  // eslint-disable-next-line functional/functional-parameters
-  const throwOnMissingUser = () => {
-    // eslint-disable-next-line functional/no-throw-statement
-    throw new Error(
-      `User [${user}] does not exist. Can not add to an existing group.`
-    );
-  };
-
-  // eslint-disable-next-line functional/functional-parameters
-  const throwOnMissingGroup = () => {
-    // eslint-disable-next-line functional/no-throw-statement
-    throw new Error(
-      `Group [${group}] does not exist. Can not add a user to a non-existent group.`
-    );
-  };
-
-  return maybeOktaUser === undefined
-    ? throwOnMissingUser()
-    : maybeOktaGroup === undefined
-    ? throwOnMissingGroup()
-    : maybeOktaUser.addToGroup(maybeOktaGroup.id);
-};
+): TE.TaskEither<string, string> =>
+  pipe(
+    // eslint-disable-next-line functional/functional-parameters
+    Ap.sequenceT(TE.ApplyPar)(
+      userService.getUser(user),
+      groupService.getGroup(group)
+    ),
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+    TE.chainEitherK(([maybeUser, maybeGroup]) =>
+      pipe(
+        Ap.sequenceT(applicativeValidation)(
+          validateGroupExists(maybeGroup, group),
+          validateUserExists(maybeUser, user)
+        ),
+        E.mapLeft(
+          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+          (errors) => `${errors.join('. ')}. Cannot add user to group.`
+        )
+      )
+    ),
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+    TE.chain(([group, user]) => groupService.addUserToGroup(user.id, group.id)),
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+    TE.chainFirstIOK((response) => Console.info(response))
+  );
 
 export default (
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
@@ -81,42 +92,21 @@ export default (
       readonly user: string;
       readonly group: string;
     }) => {
-      // eslint-disable-next-line functional/no-try-statement
-      try {
-        const throwOnBadResponse = (response: unknown): string => {
-          // eslint-disable-next-line functional/no-throw-statement
-          throw new Error(JSON.stringify(response));
-        };
+      const client = oktaManageClient({ ...args }, ['users', 'groups']);
+      const userService = new OktaUserService(client);
+      const groupService = new OktaGroupService(client);
 
-        const response: Response = await addUserToGroup(
-          {
-            ...args,
-          },
-          args.user,
-          args.group
-        );
-        // eslint-disable-next-line functional/no-expression-statement
-        console.info(
-          response.ok
-            ? `Added user [${args.user}] to group [${args.group}].`
-            : throwOnBadResponse(response)
-        );
-      } catch (error: unknown) {
+      const result = await addUserToGroup(
+        userService,
+        groupService,
+        args.user,
+        args.group
+      )();
+
+      // eslint-disable-next-line functional/no-conditional-statement
+      if (E.isLeft(result)) {
         // eslint-disable-next-line functional/no-throw-statement
-        throw error instanceof Error
-          ? new Error(
-              `Failed to add existing user [${args.user}] to group [${args.group}] in [${args.organisationUrl}].`,
-              {
-                cause: error,
-              }
-            )
-          : new Error(
-              `Failed to add existing user [${args.user}] to group [${
-                args.group
-              }] in [${args.organisationUrl}] because of [${JSON.stringify(
-                error
-              )}].`
-            );
+        throw new Error(result.left);
       }
     }
   );

@@ -37,7 +37,7 @@ export const oktaReadOnlyClient = (
 export const oktaManageClient = (
   oktaConfiguration: OktaConfiguration,
   scopes: readonly string[] = ['users']
-) =>
+): okta.Client =>
   new okta.Client({
     ...oktaConfiguration,
     authorizationMode: 'PrivateKey',

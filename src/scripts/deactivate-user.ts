@@ -1,42 +1,37 @@
-import { UserStatus, User as OktaUser } from '@okta/okta-sdk-nodejs';
 import { Argv } from 'yargs';
 import { RootCommand } from '..';
 
-import { oktaUserAsUser, User, getUser } from './services/user-service';
-import { oktaManageClient, OktaConfiguration } from './services/client-service';
+import { OktaUserService, User, UserService } from './services/user-service';
+import { oktaManageClient } from './services/client-service';
+import * as TE from 'fp-ts/lib/TaskEither';
+import * as E from 'fp-ts/lib/Either';
+import * as O from 'fp-ts/lib/Option';
+import { flow, pipe } from 'fp-ts/lib/function';
+import * as Console from 'fp-ts/lib/Console';
 
-const deactivateUser = async (
-  oktaConfiguration: OktaConfiguration,
+const deactivateUser = (
+  service: UserService,
   userId: string
-): Promise<User> => {
-  const client = oktaManageClient(oktaConfiguration);
-
-  const maybeOktaUser = await getUser(userId, client);
-
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-  const deactivate = async (oktaUser: OktaUser) => {
-    // eslint-disable-next-line functional/no-expression-statement
-    await oktaUser.deactivate({
-      sendEmail: false,
-    });
-
-    const deactivatedOktaUser = await client.getUser(userId);
-
-    return oktaUserAsUser(deactivatedOktaUser);
-  };
-
-  // eslint-disable-next-line functional/functional-parameters
-  const throwOnMissing = () => {
-    // eslint-disable-next-line functional/no-throw-statement
-    throw new Error(`User [${userId}] does not exist. Can not de-activate.`);
-  };
-
-  return maybeOktaUser === undefined
-    ? throwOnMissing()
-    : maybeOktaUser.status === UserStatus.DEPROVISIONED
-    ? oktaUserAsUser(maybeOktaUser)
-    : deactivate(maybeOktaUser);
-};
+): TE.TaskEither<string, User> =>
+  pipe(
+    userId,
+    service.getUser,
+    TE.chain(
+      flow(
+        O.fold(
+          // eslint-disable-next-line functional/functional-parameters
+          () =>
+            TE.left(`User [${userId}] does not exist. Can not de-activate.`),
+          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+          (user) =>
+            user.deactivated ? TE.right(user) : service.deleteUser(userId)
+        )
+      )
+    ),
+    TE.chainFirstIOK((user) =>
+      Console.info(`Deactivated [${user.id}] [${user.email}].`)
+    )
+  );
 
 export default (
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
@@ -65,30 +60,15 @@ export default (
       readonly organisationUrl: string;
       readonly userId: string;
     }) => {
-      // eslint-disable-next-line functional/no-try-statement
-      try {
-        const user = await deactivateUser(
-          {
-            ...args,
-          },
-          args.userId
-        );
-        // eslint-disable-next-line functional/no-expression-statement
-        console.info(`De-activated [${user.id}] [${user.email}].`);
-      } catch (error: unknown) {
+      const client = oktaManageClient({ ...args });
+      const service = new OktaUserService(client);
+
+      const result = await deactivateUser(service, args.userId)();
+
+      // eslint-disable-next-line functional/no-conditional-statement
+      if (E.isLeft(result)) {
         // eslint-disable-next-line functional/no-throw-statement
-        throw error instanceof Error
-          ? new Error(
-              `Failed to deactivate user [${args.userId}] in [${args.organisationUrl}].`,
-              {
-                cause: error,
-              }
-            )
-          : new Error(
-              `Failed to deactivate user [${args.userId}] in [${
-                args.organisationUrl
-              }] because of [${JSON.stringify(error)}].`
-            );
+        throw new Error(result.left);
       }
     }
   );

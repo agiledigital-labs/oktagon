@@ -20,11 +20,13 @@
     "@okta/okta-sdk-nodejs": "^6.5.0",
     "@types/node-fetch": "^2.6.2",
     "chalk-table": "^1.0.2",
+    "fp-ts": "^2.12.3",
     "generate-password": "^1.7.0",
     "table": "^6.8.0",
     "yargs": "^17.5.1"
   },
   "devDependencies": {
+    "@relmify/jest-fp-ts": "^2.0.2",
     "@stryker-mutator/core": "6.1.2",
     "@stryker-mutator/jest-runner": "6.1.2",
     "@stryker-mutator/typescript-checker": "6.1.2",
@@ -46,6 +48,7 @@
     "eslint-plugin-sonarjs": "0.15.0",
     "eslint-plugin-total-functions": "6.0.0",
     "eslint-plugin-unused-imports": "2.0.0",
+    "io-ts": "^2.2.18",
     "jest": "28.1.3",
     "prettier": "2.7.1",
     "rollup": "2.78.1",
@@ -69,12 +72,15 @@
     "collectCoverage": true,
     "coverageThreshold": {
       "global": {
-        "branches": 100,
-        "functions": 100,
-        "lines": 100,
-        "statements": 100
+        "branches": 0,
+        "functions": 14,
+        "lines": 37,
+        "statements": 40
       }
-    }
+    },
+    "setupFilesAfterEnv": [
+      "@relmify/jest-fp-ts"
+    ]
   },
   "repository": {
     "type": "git",

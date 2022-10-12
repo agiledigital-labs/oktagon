@@ -1,48 +1,63 @@
 import { Argv } from 'yargs';
 import { RootCommand } from '..';
-import { Response } from 'node-fetch';
 
-import { getUser } from './services/user-service';
-import { getGroup } from './services/group-service';
-import { oktaManageClient, OktaConfiguration } from './services/client-service';
+import {
+  validateUserExists,
+  validateGroupExists,
+} from './services/validation-service';
+import { UserService, OktaUserService } from './services/user-service';
+import { GroupService, OktaGroupService } from './services/group-service';
+import { oktaManageClient } from './services/client-service';
+import * as TE from 'fp-ts/lib/TaskEither';
+import * as E from 'fp-ts/lib/Either';
+import { pipe } from 'fp-ts/lib/function';
+import * as Console from 'fp-ts/lib/Console';
+import * as A from 'fp-ts/lib/Apply';
+import * as NEA from 'fp-ts/NonEmptyArray';
+
+const applicativeValidation = E.getApplicativeValidation(
+  NEA.getSemigroup<string>()
+);
 
 // There is no suitable way to check and confirm that a user exists/does not exist within a particular group outside of
 // searching for them in a large array of users. So to preserve a timewise nature. it is best to just let commands work
 // even if it didn't do anything.
 
-const removeUserfromGroup = async (
-  oktaConfiguration: OktaConfiguration,
+const removeUserFromGroup = (
+  userService: UserService,
+  groupService: GroupService,
   user: string,
   group: string
-): Promise<Response> => {
-  const client = oktaManageClient(oktaConfiguration, ['groups', 'users']);
-
-  const maybeOktaUser = await getUser(user, client);
-  const maybeOktaGroup = await getGroup(group, client);
-
-  // eslint-disable-next-line functional/functional-parameters
-  const throwOnMissingUser = () => {
-    // eslint-disable-next-line functional/no-throw-statement
-    throw new Error(
-      `User [${user}] does not exist. Can not remove from an existing group.`
-    );
-  };
-
-  // eslint-disable-next-line functional/functional-parameters
-  const throwOnMissingGroup = () => {
-    // eslint-disable-next-line functional/no-throw-statement
-    throw new Error(
-      `Group [${group}] does not exist. Can not remove a user from a non-existent group.`
-    );
-  };
-
-  return maybeOktaUser === undefined
-    ? throwOnMissingUser()
-    : maybeOktaGroup === undefined
-    ? throwOnMissingGroup()
-    : maybeOktaGroup.removeUser(maybeOktaUser.id);
-};
-
+): TE.TaskEither<string, string> =>
+  pipe(
+    user,
+    userService.getUser,
+    TE.chain((maybeUser) =>
+      pipe(
+        group,
+        groupService.getGroup,
+        TE.chain((maybeGroup) =>
+          pipe(
+            A.sequenceT(applicativeValidation)(
+              validateGroupExists(maybeGroup, group),
+              validateUserExists(maybeUser, user)
+            ),
+            E.mapLeft(
+              // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+              (errors) => `${errors.join('. ')}. Cannot remove user from group.`
+            ),
+            TE.fromEither,
+            // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+            TE.chain(([group, user]) =>
+              groupService.removeUserFromGroup(user.id, group.id)
+            )
+          )
+        )
+      )
+    ),
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+    TE.chainFirstIOK((response) => Console.info(response))
+  );
 export default (
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   rootCommand: RootCommand
@@ -81,42 +96,21 @@ export default (
       readonly user: string;
       readonly group: string;
     }) => {
-      // eslint-disable-next-line functional/no-try-statement
-      try {
-        const throwOnBadResponse = (response: unknown): string => {
-          // eslint-disable-next-line functional/no-throw-statement
-          throw new Error(JSON.stringify(response));
-        };
+      const client = oktaManageClient({ ...args }, ['users', 'groups']);
+      const userService = new OktaUserService(client);
+      const groupService = new OktaGroupService(client);
 
-        const response: Response = await removeUserfromGroup(
-          {
-            ...args,
-          },
-          args.user,
-          args.group
-        );
-        // eslint-disable-next-line functional/no-expression-statement
-        console.info(
-          response.ok
-            ? `Removed user [${args.user}] from group [${args.group}].`
-            : throwOnBadResponse(response)
-        );
-      } catch (error: unknown) {
+      const result = await removeUserFromGroup(
+        userService,
+        groupService,
+        args.user,
+        args.group
+      )();
+
+      // eslint-disable-next-line functional/no-conditional-statement
+      if (E.isLeft(result)) {
         // eslint-disable-next-line functional/no-throw-statement
-        throw error instanceof Error
-          ? new Error(
-              `Failed from remove existing user [${args.user}] from group [${args.group}] in [${args.organisationUrl}].`,
-              {
-                cause: error,
-              }
-            )
-          : new Error(
-              `Failed from remove existing user [${args.user}] remove group [${
-                args.group
-              }] in [${args.organisationUrl}] because of [${JSON.stringify(
-                error
-              )}].`
-            );
+        throw new Error(result.left);
       }
     }
   );

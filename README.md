@@ -1,6 +1,6 @@
 # Oktagon CLI interface
 
-CLI tools for managing users in Okta.
+A CLI tool for managing users in Okta.
 
 _Only use this tool in non-production environments, because it will bypass any MFA requirements of the organisation AND break the audit log that you would otherwise get in Okta._
 
