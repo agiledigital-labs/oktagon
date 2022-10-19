@@ -59,8 +59,5 @@ export default [
       !process.env.ROLLUP_WATCH ? del({ targets: 'dist/**/*' }) : undefined,
     ],
   },
-  ...scriptFiles.map((i) => {
-    console.info(i);
-    return i;
-  }).map(scriptConfiguration),
+  ...scriptFiles.map(scriptConfiguration),
 ];
