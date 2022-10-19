@@ -39,7 +39,7 @@ describe('Listing users', () => {
     const userService: UserService = {
       ...test.baseUserService(),
       // eslint-disable-next-line unused-imports/no-unused-vars-ts, @typescript-eslint/no-unused-vars
-      listUsers: (_group) => TE.right([test.user]),
+      listUsersInGroup: (_group) => TE.right([test.user]),
     };
 
     // And a group service that can find a group
@@ -90,7 +90,7 @@ describe('Listing users', () => {
     // Given a user service that fails to retrieve a list of users
     const userService: UserService = {
       ...test.baseUserService(),
-      listUsers: () => TE.left('No users.'),
+      listUsersInGroup: () => TE.left('No users.'),
     };
 
     // And a group service that succsessfully retreives a group
@@ -119,7 +119,7 @@ describe('Listing users', () => {
     const userService: UserService = {
       ...test.baseUserService(),
       // eslint-disable-next-line unused-imports/no-unused-vars-ts, @typescript-eslint/no-unused-vars
-      listUsers: jest.fn((_group) => TE.right([test.user])),
+      listUsersInGroup: jest.fn((_group) => TE.right([test.user])),
     };
 
     // And a group service that fails to find the group
@@ -139,7 +139,7 @@ describe('Listing users', () => {
     // Then we should have a left
     expect(result).toEqualLeft('No group.');
 
-    // And listUsers was never called
-    expect(userService.listUsers).not.toHaveBeenCalled();
+    // And listUsersInGroup was never called
+    expect(userService.listUsersInGroup).not.toHaveBeenCalled();
   });
 });

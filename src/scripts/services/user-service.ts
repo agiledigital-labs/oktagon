@@ -2,6 +2,7 @@ import * as okta from '@okta/okta-sdk-nodejs';
 import * as TE from 'fp-ts/lib/TaskEither';
 import * as O from 'fp-ts/lib/Option';
 import { Group } from './group-service';
+import { pipe } from 'fp-ts/lib/function';
 
 /**
  * Subset of User information provided by Okta. See okta.User for further information on it's derived type.
@@ -110,32 +111,38 @@ export class OktaUserService {
   };
 
   // eslint-disable-next-line functional/functional-parameters
-  readonly listUsers = (
-    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-    maybeGroup: O.Option<Group> = O.none
-  ): TE.TaskEither<string, readonly User[]> => {
-    // We need to populate users with all of the client data so it can be
-    // returned. Okta's listUsers() function returns a custom collection that
-    // does not allow for any form of mapping, so array mutation is needed.
+  readonly listUsers = (): TE.TaskEither<string, readonly User[]> =>
+    // eslint-disable-next-line functional/no-this-expression
+    this.privateListUsers(TE.right(this.client));
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const groupOrClient: TE.TaskEither<string, okta.Client | okta.Group> =
+  readonly listUsersInGroup = (
+    group: O.Option<Group>
+  ): TE.TaskEither<string, readonly User[]> =>
+    pipe(
+      group,
       O.fold(
         // eslint-disable-next-line functional/functional-parameters, functional/no-this-expression
-        (): TE.TaskEither<string, okta.Client | okta.Group> =>
-          // eslint-disable-next-line functional/no-this-expression
-          TE.right(this.client),
-        // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+        () => TE.left('The requested group does not exist'),
         (group: Group) =>
           TE.tryCatch(
             // eslint-disable-next-line functional/functional-parameters, functional/no-this-expression
             () => this.client.getGroup(group.id),
             (error: unknown) => `Fail ${JSON.stringify(error)}`
           )
-      )(maybeGroup);
+      ),
+      // eslint-disable-next-line functional/no-this-expression
+      this.privateListUsers
+    );
 
-    // eslint-disable-next-line functional/no-this-expression, @typescript-eslint/prefer-readonly-parameter-types
-    return TE.chain((maybeGroupOrClient: okta.Client | okta.Group) =>
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+  readonly privateListUsers = (
+    groupOrClient: TE.TaskEither<string, okta.Group | okta.Client>
+  ) =>
+    // We need to populate users with all of the client data so it can be
+    // returned. Okta's listUsers() function returns a custom collection that
+    // does not allow for any form of mapping, so array mutation is needed.
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+    TE.chain((maybeGroupOrClient: okta.Client | okta.Group) =>
       TE.tryCatch(
         // eslint-disable-next-line functional/functional-parameters
         () => {
@@ -159,7 +166,6 @@ export class OktaUserService {
           `Failed to list users because of [${JSON.stringify(error)}].`
       )
     )(groupOrClient);
-  };
 
   readonly deleteUser = (userId: string): TE.TaskEither<string, User> =>
     TE.tryCatch(
@@ -203,6 +209,7 @@ export class OktaUserService {
 export type UserService = {
   readonly createUser: OktaUserService['createUser'];
   readonly listUsers: OktaUserService['listUsers'];
+  readonly listUsersInGroup: OktaUserService['listUsersInGroup'];
   readonly getUser: OktaUserService['getUser'];
   readonly deleteUser: OktaUserService['deleteUser'];
   readonly deactivateUser: OktaUserService['deactivateUser'];

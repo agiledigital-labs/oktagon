@@ -52,7 +52,7 @@ export const usersInGroup = (
   pipe(
     groupService.getGroup(groupId),
     // eslint-disable-next-line functional/functional-parameters
-    TE.chain(userService.listUsers),
+    TE.chain(userService.listUsersInGroup),
     TE.map((users) => usersTable(users)),
     TE.chainFirstIOK(Console.info)
   );
@@ -96,7 +96,7 @@ export default (
       // eslint-disable-next-line functional/no-expression-statement
       Console.info(args.groupId);
 
-      const result = await (args.groupId === undefined
+      const result: E.Either<string, string> = await (args.groupId === undefined
         ? users(userService)
         : usersInGroup(userService, groupService, args.groupId))();
 
