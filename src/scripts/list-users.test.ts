@@ -7,7 +7,7 @@ import { UserService } from './services/user-service';
 import { users, usersInGroup } from './list-users';
 import { GroupService } from './services/group-service';
 
-import * as test from './data-providers';
+import * as test from './__fixtures__/data-providers';
 
 describe('Listing all users', () => {
   // Note that listing multiple or no users is outside the scope of the test, as that functionality comes from a dependency
