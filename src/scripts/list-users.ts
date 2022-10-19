@@ -7,9 +7,14 @@ import { oktaReadOnlyClient } from './services/client-service';
 
 import * as TE from 'fp-ts/lib/TaskEither';
 import * as E from 'fp-ts/lib/Either';
+import * as O from 'fp-ts/lib/Option';
 import { pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
-import { OktaGroupService, GroupService } from './services/group-service';
+import {
+  OktaGroupService,
+  GroupService,
+  Group,
+} from './services/group-service';
 
 /**
  * Tabulates user information for display.
@@ -51,6 +56,14 @@ export const usersInGroup = (
 ) =>
   pipe(
     groupService.getGroup(groupId),
+    TE.chain(
+      O.fold(
+        // eslint-disable-next-line functional/functional-parameters
+        (): TE.TaskEither<string, Group> =>
+          TE.left(`The group [${groupId}] does not exist`),
+        (group: Group) => TE.right(group)
+      )
+    ),
     // eslint-disable-next-line functional/functional-parameters
     TE.chain(userService.listUsersInGroup),
     TE.map((users) => usersTable(users)),

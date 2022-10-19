@@ -2,8 +2,8 @@
 /* eslint-disable functional/no-expression-statement */
 /* eslint-disable functional/functional-parameters */
 import * as TE from 'fp-ts/TaskEither';
-import { User, UserService } from './user-service';
-import { Group, GroupService } from './group-service';
+import { User, UserService } from './services/user-service';
+import { Group, GroupService } from './services/group-service';
 import { UserStatus } from '@okta/okta-sdk-nodejs';
 
 export const returnLeftTE = jest.fn(() => TE.left('An error occurred'));

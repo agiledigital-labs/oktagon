@@ -7,7 +7,7 @@ import { UserService } from './services/user-service';
 import { addUserToGroup } from './add-user-to-group';
 import { GroupService } from './services/group-service';
 
-import * as test from './services/testing-service';
+import * as test from './data-providers';
 
 describe('Adding a user to a group', () => {
   it('passes when calling addUserToGroup with an existing user and group', async () => {

@@ -116,20 +116,16 @@ export class OktaUserService {
     this.privateListUsers(TE.right(this.client));
 
   readonly listUsersInGroup = (
-    group: O.Option<Group>
+    group: Group
   ): TE.TaskEither<string, readonly User[]> =>
     pipe(
       group,
-      O.fold(
-        // eslint-disable-next-line functional/functional-parameters, functional/no-this-expression
-        () => TE.left('The requested group does not exist'),
-        (group: Group) =>
-          TE.tryCatch(
-            // eslint-disable-next-line functional/functional-parameters, functional/no-this-expression
-            () => this.client.getGroup(group.id),
-            (error: unknown) => `Fail ${JSON.stringify(error)}`
-          )
-      ),
+      (group: Group) =>
+        TE.tryCatch(
+          // eslint-disable-next-line functional/functional-parameters, functional/no-this-expression
+          () => this.client.getGroup(group.id),
+          (error: unknown) => `Fail ${JSON.stringify(error)}`
+        ),
       // eslint-disable-next-line functional/no-this-expression
       this.privateListUsers
     );
