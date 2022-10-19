@@ -36,7 +36,7 @@ const usersTable = (users: readonly User[]): string => {
   );
 };
 
-const users = (service: UserService) =>
+export const users = (service: UserService) =>
   pipe(
     // eslint-disable-next-line functional/functional-parameters
     service.listUsers(),
@@ -44,7 +44,7 @@ const users = (service: UserService) =>
     TE.chainFirstIOK(Console.info)
   );
 
-const usersInGroup = (
+export const usersInGroup = (
   userService: UserService,
   groupService: GroupService,
   groupId: string
