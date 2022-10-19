@@ -134,33 +134,31 @@ export class OktaUserService {
           )
       )(maybeGroup);
 
-    return (
-      // eslint-disable-next-line functional/no-this-expression, @typescript-eslint/prefer-readonly-parameter-types
-      TE.chain((maybeGroupOrClient: okta.Client | okta.Group) =>
-        TE.tryCatch(
-          // eslint-disable-next-line functional/functional-parameters
-          () => {
-            // eslint-disable-next-line functional/prefer-readonly-type
-            const users: User[] = [];
-            return (
-              maybeGroupOrClient
-                .listUsers()
-                // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-                .each((oktaUser) => {
-                  // eslint-disable-next-line functional/immutable-data
-                  return users.push(oktaUserAsUser(oktaUser));
-                })
-                // eslint-disable-next-line functional/functional-parameters
-                .then(() => {
-                  return users;
-                })
-            );
-          },
-          (error: unknown) =>
-            `Failed to list users because of [${JSON.stringify(error)}].`
-        )
-      )(groupOrClient)
-    );
+    // eslint-disable-next-line functional/no-this-expression, @typescript-eslint/prefer-readonly-parameter-types
+    return TE.chain((maybeGroupOrClient: okta.Client | okta.Group) =>
+      TE.tryCatch(
+        // eslint-disable-next-line functional/functional-parameters
+        () => {
+          // eslint-disable-next-line functional/prefer-readonly-type
+          const users: User[] = [];
+          return (
+            maybeGroupOrClient
+              .listUsers()
+              // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+              .each((oktaUser) => {
+                // eslint-disable-next-line functional/immutable-data
+                return users.push(oktaUserAsUser(oktaUser));
+              })
+              // eslint-disable-next-line functional/functional-parameters
+              .then(() => {
+                return users;
+              })
+          );
+        },
+        (error: unknown) =>
+          `Failed to list users because of [${JSON.stringify(error)}].`
+      )
+    )(groupOrClient);
   };
 
   readonly deleteUser = (userId: string): TE.TaskEither<string, User> =>
