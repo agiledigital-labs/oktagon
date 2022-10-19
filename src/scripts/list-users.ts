@@ -88,7 +88,7 @@ export default (
     }) => {
       const client = oktaReadOnlyClient(
         { ...args },
-        args.groupId === undefined ? ['users'] : ['users', 'groups']
+        args.groupId === undefined ? ['users'] : ['groups']
       );
       const userService = new OktaUserService(client);
       const groupService = new OktaGroupService(client);
