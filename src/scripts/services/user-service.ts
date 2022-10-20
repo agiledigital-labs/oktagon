@@ -1,6 +1,8 @@
 import * as okta from '@okta/okta-sdk-nodejs';
 import * as TE from 'fp-ts/lib/TaskEither';
 import * as O from 'fp-ts/lib/Option';
+import { Group } from './group-service';
+import { pipe } from 'fp-ts/lib/function';
 
 /**
  * Subset of User information provided by Okta. See okta.User for further information on it's derived type.
@@ -109,36 +111,57 @@ export class OktaUserService {
   };
 
   // eslint-disable-next-line functional/functional-parameters
-  readonly listUsers = (): TE.TaskEither<string, readonly User[]> => {
+  readonly listUsers = (): TE.TaskEither<string, readonly User[]> =>
+    // eslint-disable-next-line functional/no-this-expression
+    this.privateListUsers(TE.right(this.client));
+
+  readonly listUsersInGroup = (
+    group: Group
+  ): TE.TaskEither<string, readonly User[]> =>
+    pipe(
+      group,
+      (group: Group) =>
+        TE.tryCatch(
+          // eslint-disable-next-line functional/functional-parameters, functional/no-this-expression
+          () => this.client.getGroup(group.id),
+          (error: unknown) => `Fail ${JSON.stringify(error)}`
+        ),
+      // eslint-disable-next-line functional/no-this-expression
+      this.privateListUsers
+    );
+
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+  readonly privateListUsers = (
+    groupOrClient: TE.TaskEither<string, okta.Group | okta.Client>
+  ) =>
     // We need to populate users with all of the client data so it can be
     // returned. Okta's listUsers() function returns a custom collection that
     // does not allow for any form of mapping, so array mutation is needed.
-
-    return TE.tryCatch(
-      // eslint-disable-next-line functional/functional-parameters
-      () => {
-        // eslint-disable-next-line functional/prefer-readonly-type
-        const users: User[] = [];
-
-        return (
-          // eslint-disable-next-line functional/no-this-expression
-          this.client
-            .listUsers()
-            // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-            .each((oktaUser) => {
-              // eslint-disable-next-line functional/immutable-data
-              return users.push(oktaUserAsUser(oktaUser));
-            })
-            // eslint-disable-next-line functional/functional-parameters
-            .then(() => {
-              return users;
-            })
-        );
-      },
-      (error: unknown) =>
-        `Failed to list users because of [${JSON.stringify(error)}].`
-    );
-  };
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+    TE.chain((maybeGroupOrClient: okta.Client | okta.Group) =>
+      TE.tryCatch(
+        // eslint-disable-next-line functional/functional-parameters
+        () => {
+          // eslint-disable-next-line functional/prefer-readonly-type
+          const users: User[] = [];
+          return (
+            maybeGroupOrClient
+              .listUsers()
+              // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+              .each((oktaUser) => {
+                // eslint-disable-next-line functional/immutable-data
+                return users.push(oktaUserAsUser(oktaUser));
+              })
+              // eslint-disable-next-line functional/functional-parameters
+              .then(() => {
+                return users;
+              })
+          );
+        },
+        (error: unknown) =>
+          `Failed to list users because of [${JSON.stringify(error)}].`
+      )
+    )(groupOrClient);
 
   readonly deleteUser = (userId: string): TE.TaskEither<string, User> =>
     TE.tryCatch(
@@ -182,6 +205,7 @@ export class OktaUserService {
 export type UserService = {
   readonly createUser: OktaUserService['createUser'];
   readonly listUsers: OktaUserService['listUsers'];
+  readonly listUsersInGroup: OktaUserService['listUsersInGroup'];
   readonly getUser: OktaUserService['getUser'];
   readonly deleteUser: OktaUserService['deleteUser'];
   readonly deactivateUser: OktaUserService['deactivateUser'];

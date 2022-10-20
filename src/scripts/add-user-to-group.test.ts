@@ -3,55 +3,24 @@
 /* eslint-disable functional/functional-parameters */
 import * as TE from 'fp-ts/TaskEither';
 import * as O from 'fp-ts/Option';
-import { User, UserService } from './services/user-service';
+import { UserService } from './services/user-service';
 import { addUserToGroup } from './add-user-to-group';
-import { Group, GroupService } from './services/group-service';
-import { UserStatus } from '@okta/okta-sdk-nodejs';
+import { GroupService } from './services/group-service';
 
-const returnLeftTE = jest.fn(() => TE.left('An error occurred'));
-
-const user: User = {
-  id: 'user_id',
-  login: 'login',
-  email: 'test@localhost',
-  name: 'test user',
-  status: UserStatus.ACTIVE,
-  deactivated: false,
-};
-
-const group: Group = {
-  id: 'group_id',
-  name: 'test group',
-  type: 'group type',
-};
-
-const baseUserService = (): UserService => ({
-  getUser: returnLeftTE,
-  createUser: returnLeftTE,
-  deleteUser: returnLeftTE,
-  deactivateUser: returnLeftTE,
-  listUsers: returnLeftTE,
-});
-
-const baseGroupService = (): GroupService => ({
-  getGroup: returnLeftTE,
-  listGroups: returnLeftTE,
-  addUserToGroup: returnLeftTE,
-  removeUserFromGroup: returnLeftTE,
-});
+import * as test from './__fixtures__/data-providers';
 
 describe('Adding a user to a group', () => {
   it('passes when calling addUserToGroup with an existing user and group', async () => {
     // Given a user service can retrieve a user.
     const userService: UserService = {
-      ...baseUserService(),
-      getUser: () => TE.right(O.some(user)),
+      ...test.baseUserService(),
+      getUser: () => TE.right(O.some(test.user)),
     };
 
     // And a group service that can retrieve a group and add a user to it.
     const groupService: GroupService = {
-      ...baseGroupService(),
-      getGroup: () => TE.right(O.some(group)),
+      ...test.baseGroupService(),
+      getGroup: () => TE.right(O.some(test.group)),
       addUserToGroup: jest.fn(() => TE.right('group created')),
     };
 
@@ -67,20 +36,23 @@ describe('Adding a user to a group', () => {
     expect(result).toEqualRight('group created');
 
     // And the user should have been added to the expected group
-    expect(groupService.addUserToGroup).toBeCalledWith(user.id, group.id);
+    expect(groupService.addUserToGroup).toBeCalledWith(
+      test.user.id,
+      test.group.id
+    );
   });
 
   it('fails if the user does not exist', async () => {
     // Given a user service that can not locate the user.
     const userService = {
-      ...baseUserService(),
+      ...test.baseUserService(),
       getUser: () => TE.right(O.none),
     };
 
     // And a group service that can find the group.
     const groupService = {
-      ...baseGroupService(),
-      getGroup: () => TE.right(O.some(group)),
+      ...test.baseGroupService(),
+      getGroup: () => TE.right(O.some(test.group)),
     };
 
     // When the user is added to the group
@@ -103,14 +75,14 @@ describe('Adding a user to a group', () => {
   it('fails if retrieving the user does fails', async () => {
     // Given a user service that fails when finding the user.
     const userService = {
-      ...baseUserService(),
+      ...test.baseUserService(),
       getUser: () => TE.left('failed to get user'),
     };
 
     // And a group service that can find the group.
     const groupService = {
-      ...baseGroupService(),
-      getGroup: () => TE.right(O.some(group)),
+      ...test.baseGroupService(),
+      getGroup: () => TE.right(O.some(test.group)),
     };
 
     // When the user is added to the group
@@ -131,13 +103,13 @@ describe('Adding a user to a group', () => {
   it('fails if the group does not exist', async () => {
     // Given a user service that can locate the user.
     const userService = {
-      ...baseUserService(),
-      getUser: () => TE.right(O.some(user)),
+      ...test.baseUserService(),
+      getUser: () => TE.right(O.some(test.user)),
     };
 
     // And a group service that can find not the group.
     const groupService = {
-      ...baseGroupService(),
+      ...test.baseGroupService(),
       getGroup: () => TE.right(O.none),
     };
 
@@ -161,13 +133,13 @@ describe('Adding a user to a group', () => {
   it('fails if getting the group fails', async () => {
     // Given a user service that can locate the user.
     const userService = {
-      ...baseUserService(),
-      getUser: () => TE.right(O.some(user)),
+      ...test.baseUserService(),
+      getUser: () => TE.right(O.some(test.user)),
     };
 
     // And a group service fails when finding the gruop.
     const groupService = {
-      ...baseGroupService(),
+      ...test.baseGroupService(),
       getGroup: () => TE.left('failed to get group'),
     };
 
@@ -189,13 +161,13 @@ describe('Adding a user to a group', () => {
   it('fails if both the group and the user do not exist', async () => {
     // Given a user service that can not locate the user.
     const userService = {
-      ...baseUserService(),
+      ...test.baseUserService(),
       getUser: () => TE.right(O.none),
     };
 
     // And a group service that can find not the group.
     const groupService = {
-      ...baseGroupService(),
+      ...test.baseGroupService(),
       getGroup: () => TE.right(O.none),
     };
 
@@ -219,14 +191,14 @@ describe('Adding a user to a group', () => {
   it('reports an error when adding to the group failed', async () => {
     // Given a user service that can locate the user.
     const userService = {
-      ...baseUserService(),
-      getUser: () => TE.right(O.some(user)),
+      ...test.baseUserService(),
+      getUser: () => TE.right(O.some(test.user)),
     };
 
     // And a group service that can find the group, but not add the user to it..
     const groupService = {
-      ...baseGroupService(),
-      getGroup: () => TE.right(O.some(group)),
+      ...test.baseGroupService(),
+      getGroup: () => TE.right(O.some(test.group)),
       addUserToGroup: jest.fn(() => TE.left('failed to add user to group')),
     };
 
@@ -242,6 +214,9 @@ describe('Adding a user to a group', () => {
     expect(result).toEqualLeft('failed to add user to group');
 
     // But an attempt was made to add the user to the group.
-    expect(groupService.addUserToGroup).toBeCalledWith(user.id, group.id);
+    expect(groupService.addUserToGroup).toBeCalledWith(
+      test.user.id,
+      test.group.id
+    );
   });
 });

@@ -114,7 +114,7 @@ export class OktaGroupService {
       // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
       TE.chain((response) =>
         response.ok
-          ? TE.right(`Added user [${userId}] to group [${groupId}].`)
+          ? TE.right(`Removed user [${userId}] from group [${groupId}].`)
           : TE.left(`Something went wrong. [${JSON.stringify(response)}]`)
       )
     );
