@@ -64,7 +64,8 @@ export default (
           type: 'string',
           demandOption: true,
         })
-        .boolean('force');
+        .boolean('force')
+        .describe('force', 'force delete the user regardless of their status');
     },
     async (args: {
       readonly clientId: string;
