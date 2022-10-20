@@ -18,7 +18,7 @@ describe('Deleting users without using force', () => {
     // Given a deleteUser function that can succsessfully delete a given user
     const userService: UserService = {
       ...baseUserService(),
-      deleteUser: () => TE.right(deactivatedUser),
+      deleteUser: jest.fn(() => TE.right(deactivatedUser)),
       getUser: () => TE.right(O.some(deactivatedUser)),
     };
 
@@ -27,6 +27,9 @@ describe('Deleting users without using force', () => {
 
     // Then we should have a right
     expect(result).toEqualRight(deactivatedUser);
+
+    // And we also expect delete user to have been called
+    expect(userService.deleteUser).toHaveBeenCalled();
   });
 
   it('fails when attempting to delete a non-deprovisioned user', async () => {
