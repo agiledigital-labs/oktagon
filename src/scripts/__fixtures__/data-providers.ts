@@ -18,10 +18,7 @@ export const user: User = {
 };
 
 export const deactivatedUser: User = {
-  id: 'deactivated_user_id',
-  login: 'login',
-  email: 'deactivated@localhost',
-  name: 'deactivated user',
+  ...user,
   status: UserStatus.DEPROVISIONED,
   deactivated: true,
 };
