@@ -1,7 +1,9 @@
+/* eslint-disable sonarjs/no-duplicate-string */
 /* eslint-disable functional/no-return-void */
 /* eslint-disable functional/no-expression-statement */
 /* eslint-disable functional/functional-parameters */
 import * as TE from 'fp-ts/TaskEither';
+import * as E from 'fp-ts/Either';
 import * as O from 'fp-ts/Option';
 import { UserService } from './services/user-service';
 import { users, usersInGroup } from './list-users';
@@ -11,7 +13,7 @@ import * as test from './__fixtures__/data-providers';
 
 describe('Listing all users', () => {
   // Note that listing multiple or no users is outside the scope of the test, as that functionality comes from a dependency
-  it('passes when attempting to list users without a group without error', async () => {
+  it('passes when attempting to list users without error', async () => {
     // Given a user service that can retreive a list containing a single user
     const userService: UserService = {
       ...test.baseUserService(),
@@ -25,7 +27,7 @@ describe('Listing all users', () => {
     expect(result).toBeRight();
 
     // And if it is a right, we should get a string as a result
-    const actual = result._tag === 'Right' ? result.right : result.left;
+    const actual = E.toUnion(result);
 
     // And we expect that the resulting string contains the ID, Email, Name, and Status of the User
     expect(actual).toContain('user_id');
@@ -34,23 +36,23 @@ describe('Listing all users', () => {
     expect(actual).toContain('ACTIVE');
   });
 
-  it('fails when attempting to list users without a group with error', async () => {
+  it('fails when attempting to list users with error', async () => {
     // Given a user service that fails to retrieve a list of users
     const userService: UserService = {
       ...test.baseUserService(),
-      listUsers: () => TE.left('No users.'),
+      listUsers: () => TE.left('expected error'),
     };
 
     // When we attempt to list the users from the client
     const result = await users(userService)();
 
     // Then we should have a left
-    expect(result).toEqualLeft('No users.');
+    expect(result).toEqualLeft('expected error');
   });
 });
 
 describe('Listing users within groups', () => {
-  it('passes when attempting to list users inside a group without error', async () => {
+  it('passes when attempting to list users in an existing group without error', async () => {
     // Given a user service that can retreive a list containing a single user
     const userService: UserService = {
       ...test.baseUserService(),
@@ -76,7 +78,7 @@ describe('Listing users within groups', () => {
     expect(result).toBeRight();
 
     // And if it is a right, we should get a string as a result
-    const actual = result._tag === 'Right' ? result.right : result.left;
+    const actual = E.toUnion(result);
 
     // And we expect that the resulting string contains the ID, Email, Name, and Status of the User
     expect(actual).toContain('user_id');
@@ -92,7 +94,7 @@ describe('Listing users within groups', () => {
     // Given a user service that fails to retrieve a list of users
     const userService: UserService = {
       ...test.baseUserService(),
-      listUsersInGroup: () => TE.left('No users.'),
+      listUsersInGroup: () => TE.left('expected error'),
     };
 
     // And a group service that succsessfully retreives a group
@@ -110,13 +112,13 @@ describe('Listing users within groups', () => {
     )();
 
     // Then we should have a left
-    expect(result).toEqualLeft('No users.');
+    expect(result).toEqualLeft('expected error');
 
     // But getGroup was called
     expect(groupService.getGroup).toBeCalledWith(test.group.id);
   });
 
-  it('fails when attempting to list users from a non-existent group', async () => {
+  it('fails when attempting to list users given getGroup fails', async () => {
     // Given a user service that succsessfully retrieves a list of users (which should be impossible if the group doesn't exist)
     const userService: UserService = {
       ...test.baseUserService(),
@@ -128,7 +130,7 @@ describe('Listing users within groups', () => {
     const groupService: GroupService = {
       ...test.baseGroupService(),
       // eslint-disable-next-line unused-imports/no-unused-vars-ts, @typescript-eslint/no-unused-vars
-      getGroup: (_group) => TE.left('No group.'),
+      getGroup: (_group) => TE.left('expected error'),
     };
 
     // When we attempt to list the users from the client
@@ -139,13 +141,13 @@ describe('Listing users within groups', () => {
     )();
 
     // Then we should have a left
-    expect(result).toEqualLeft('No group.');
+    expect(result).toEqualLeft('expected error');
 
     // And listUsersInGroup was never called
     expect(userService.listUsersInGroup).not.toHaveBeenCalled();
   });
 
-  it('fails when attempting to list users from a none group', async () => {
+  it('fails when attempting to list users from a non-existent group', async () => {
     // Given a user service that succsessfully retrieves a list of users (which should be impossible if the group doesn't exist)
     const userService: UserService = {
       ...test.baseUserService(),
@@ -153,7 +155,7 @@ describe('Listing users within groups', () => {
       listUsersInGroup: jest.fn((_group) => TE.right([test.user])),
     };
 
-    // And a group service that fails to find the group, this time returning none instead of an error
+    // And a getGroup function that fails to find the group, this time returning none instead of an error
     const groupService: GroupService = {
       ...test.baseGroupService(),
       // eslint-disable-next-line unused-imports/no-unused-vars-ts, @typescript-eslint/no-unused-vars
