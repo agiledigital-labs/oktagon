@@ -17,6 +17,12 @@ export const user: User = {
   deactivated: false,
 };
 
+export const deactivatedUser: User = {
+  ...user,
+  status: UserStatus.DEPROVISIONED,
+  deactivated: true,
+};
+
 export const group: Group = {
   id: 'group_id',
   name: 'test group',
