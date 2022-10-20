@@ -1,7 +1,7 @@
 import { Argv } from 'yargs';
 import { RootCommand } from '..';
 
-import { UserService, OktaUserService } from './services/user-service';
+import { UserService, OktaUserService, User } from './services/user-service';
 import { oktaManageClient } from './services/client-service';
 import * as TE from 'fp-ts/lib/TaskEither';
 import * as E from 'fp-ts/lib/Either';
@@ -11,8 +11,9 @@ import * as Console from 'fp-ts/lib/Console';
 
 const deleteUser = (
   service: UserService,
-  userId: string
-): TE.TaskEither<string, unknown> =>
+  userId: string,
+  force: boolean
+): TE.TaskEither<string, User> =>
   pipe(
     userId,
     service.getUser,
@@ -25,6 +26,11 @@ const deleteUser = (
           (user) =>
             user.deactivated
               ? service.deleteUser(userId)
+              : force
+              ? pipe(
+                  service.deactivateUser(userId),
+                  TE.chain((user: User) => service.deleteUser(user.id))
+                )
               : TE.left(
                   `User [${userId}] has not been deprovisioned. Deprovision before deleting.`
                 )
@@ -44,31 +50,33 @@ export default (
   readonly privateKey: string;
   readonly organisationUrl: string;
   readonly userId: string;
+  readonly force: boolean;
 }> =>
   rootCommand.command(
     'delete-user [user-id]',
-    'Deletes the specified user. Only works if user status is deprovisioned.',
+    'Deletes the specified user. Only works if user status is deprovisioned or if the --force argument is included.',
     // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => {
       // eslint-disable-next-line functional/no-expression-statement
-      yargs.positional('user-id', {
-        describe: 'the identifier of the user to delete',
-        type: 'string',
-        demandOption: true,
-      });
+      yargs
+        .positional('user-id', {
+          describe: 'the identifier of the user to delete',
+          type: 'string',
+          demandOption: true,
+        })
+        .boolean('force');
     },
     async (args: {
       readonly clientId: string;
       readonly privateKey: string;
       readonly organisationUrl: string;
       readonly userId: string;
+      readonly force: boolean;
     }) => {
-      // eslint-disable-next-line functional/no-try-statement
-
       const client = oktaManageClient({ ...args });
       const service = new OktaUserService(client);
 
-      const result = await deleteUser(service, args.userId)();
+      const result = await deleteUser(service, args.userId, args.force)();
 
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {
