@@ -17,6 +17,15 @@ export const user: User = {
   deactivated: false,
 };
 
+export const deactivatedUser: User = {
+  id: 'deactivated_user_id',
+  login: 'login',
+  email: 'deactivated@localhost',
+  name: 'deactivated user',
+  status: UserStatus.DEPROVISIONED,
+  deactivated: true,
+};
+
 export const group: Group = {
   id: 'group_id',
   name: 'test group',
