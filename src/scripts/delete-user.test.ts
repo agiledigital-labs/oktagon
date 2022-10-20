@@ -7,38 +7,38 @@ import * as O from 'fp-ts/Option';
 import { UserService } from './services/user-service';
 import { deleteUser } from './delete-user';
 
-import * as test from './__fixtures__/data-providers';
+import {
+  baseUserService,
+  user,
+  deactivatedUser,
+} from './__fixtures__/data-providers';
 
 describe('Deleting users without using force', () => {
   it('passes when attempting to delete a deprovisioned user', async () => {
     // Given a deleteUser function that can succsessfully delete a given user
     const userService: UserService = {
-      ...test.baseUserService(),
-      deleteUser: () => TE.right(test.deactivatedUser),
-      getUser: () => TE.right(O.some(test.deactivatedUser)),
+      ...baseUserService(),
+      deleteUser: () => TE.right(deactivatedUser),
+      getUser: () => TE.right(O.some(deactivatedUser)),
     };
 
     // When we attempt to delete an existing deprovisioned user
-    const result = await deleteUser(
-      userService,
-      test.deactivatedUser.id,
-      false
-    )();
+    const result = await deleteUser(userService, deactivatedUser.id, false)();
 
     // Then we should have a right
-    expect(result).toEqualRight(test.deactivatedUser);
+    expect(result).toEqualRight(deactivatedUser);
   });
 
   it('fails when attempting to delete a non-deprovisioned user', async () => {
     // Given a deleteUser function that can succsessfully delete a given user (which theoretically cannot happen if not deprovisioned)
     const userService: UserService = {
-      ...test.baseUserService(),
-      deleteUser: jest.fn(() => TE.right(test.user)),
-      getUser: () => TE.right(O.some(test.user)),
+      ...baseUserService(),
+      deleteUser: jest.fn(() => TE.right(user)),
+      getUser: () => TE.right(O.some(user)),
     };
 
     // When we attempt to delete an existing non-deprovisioned user
-    const result = await deleteUser(userService, test.user.id, false)();
+    const result = await deleteUser(userService, user.id, false)();
 
     // Then we should have a left
     expect(result).toEqualLeft(
@@ -55,17 +55,17 @@ describe('Deleting a user with force', () => {
   it('passes when attempting to delete a non-deprovisioned user', async () => {
     // Given a deleteUser/deactivateUser function that can succsessfully deactivate and delete a given user
     const userService: UserService = {
-      ...test.baseUserService(),
-      deleteUser: () => TE.right(test.user),
-      deactivateUser: jest.fn(() => TE.right(test.user)),
-      getUser: () => TE.right(O.some(test.user)),
+      ...baseUserService(),
+      deleteUser: () => TE.right(user),
+      deactivateUser: jest.fn(() => TE.right(user)),
+      getUser: () => TE.right(O.some(user)),
     };
 
     // When we attempt to delete an existing non-deprovisioned user
-    const result = await deleteUser(userService, test.user.id, true)();
+    const result = await deleteUser(userService, user.id, true)();
 
     // Then we should have a right
-    expect(result).toEqualRight(test.user);
+    expect(result).toEqualRight(user);
 
     // And we also expect decativate to have been called
     expect(userService.deactivateUser).toHaveBeenCalled();
@@ -74,20 +74,16 @@ describe('Deleting a user with force', () => {
   it('passes when attempting to delete an already deprovisioned user', async () => {
     // Given a deleteUser function that can succsessfully delete a given user
     const userService: UserService = {
-      ...test.baseUserService(),
-      deleteUser: () => TE.right(test.deactivatedUser),
-      getUser: () => TE.right(O.some(test.deactivatedUser)),
+      ...baseUserService(),
+      deleteUser: () => TE.right(deactivatedUser),
+      getUser: () => TE.right(O.some(deactivatedUser)),
     };
 
     // When we attempt to delete an existing non-deprovisioned user
-    const result = await deleteUser(
-      userService,
-      test.deactivatedUser.id,
-      true
-    )();
+    const result = await deleteUser(userService, deactivatedUser.id, true)();
 
     // Then we should have a right
-    expect(result).toEqualRight(test.deactivatedUser);
+    expect(result).toEqualRight(deactivatedUser);
 
     // And we also expect decativate to have not been called
     expect(userService.deactivateUser).not.toHaveBeenCalled();
@@ -96,14 +92,14 @@ describe('Deleting a user with force', () => {
   it('fails when attempting to deprovision a user fails', async () => {
     // Given the deactivateUser function that cannot deactivate a user, but deleteUser and getUser works fine
     const userService: UserService = {
-      ...test.baseUserService(),
-      deleteUser: jest.fn(() => TE.right(test.user)),
+      ...baseUserService(),
+      deleteUser: jest.fn(() => TE.right(user)),
       deactivateUser: () => TE.left('expected error'),
-      getUser: () => TE.right(O.some(test.user)),
+      getUser: () => TE.right(O.some(user)),
     };
 
     // When we attempt to delete an existing non-deprovisioned user
-    const result = await deleteUser(userService, test.user.id, true)();
+    const result = await deleteUser(userService, user.id, true)();
 
     // Then we should have a left
     expect(result).toEqualLeft('expected error');
@@ -123,17 +119,13 @@ describe.each([
     it('fails when attempting to delete a user does not work, %s', async () => {
       // Given that getUser works, but deleteUser does not
       const userService: UserService = {
-        ...test.baseUserService(),
+        ...baseUserService(),
         deleteUser: () => TE.left('expected error'),
-        getUser: () => TE.right(O.some(test.deactivatedUser)),
+        getUser: () => TE.right(O.some(deactivatedUser)),
       };
 
       // When we attempt to delete an existing user both with and without force
-      const result = await deleteUser(
-        userService,
-        test.deactivatedUser.id,
-        force
-      )();
+      const result = await deleteUser(userService, deactivatedUser.id, force)();
 
       // Then we should have a left
       expect(result).toEqualLeft('expected error');
@@ -142,13 +134,13 @@ describe.each([
     it('fails when attempting to delete a non-existent user, %s', async () => {
       // Given that deleteUser works, but the user in question does not exist
       const userService: UserService = {
-        ...test.baseUserService(),
-        deleteUser: jest.fn(() => TE.right(test.user)),
+        ...baseUserService(),
+        deleteUser: jest.fn(() => TE.right(user)),
         getUser: () => TE.right(O.none),
       };
 
       // When we attempt to delete an existing user both with and without force
-      const result = await deleteUser(userService, test.user.id, force)();
+      const result = await deleteUser(userService, user.id, force)();
       // Then we should have a left
       expect(result).toEqualLeft(
         'User [user_id] does not exist. Can not delete.'
@@ -161,13 +153,13 @@ describe.each([
     it('fails when retreiving the user fails, %s', async () => {
       // Given that deleteUser works, but getUser retrieves no valid users
       const userService: UserService = {
-        ...test.baseUserService(),
-        deleteUser: jest.fn(() => TE.right(test.user)),
+        ...baseUserService(),
+        deleteUser: jest.fn(() => TE.right(user)),
         getUser: () => TE.left('expected error'),
       };
 
       // When we attempt to delete an existing user both with and without force
-      const result = await deleteUser(userService, test.user.id, force)();
+      const result = await deleteUser(userService, user.id, force)();
 
       // Then we should have a left
       expect(result).toEqualLeft('expected error');
