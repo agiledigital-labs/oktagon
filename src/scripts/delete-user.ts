@@ -9,6 +9,13 @@ import * as O from 'fp-ts/lib/Option';
 import { flow, pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
 
+/**
+ * Deletes a user belonging to an Okta organisation/client
+ * @param service the service used to communicate with the client
+ * @param userId the ID of the user to be deleted
+ * @param force whether to delete the user regardless of if they are deprovisioned or not
+ * @returns the deleted user
+ */
 export const deleteUser = (
   service: UserService,
   userId: string,
