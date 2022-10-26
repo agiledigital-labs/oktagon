@@ -51,8 +51,7 @@
         "ignorePrefixSelector": [
           "CallExpression[callee.object.name='TE'][callee.property.name='tryCatch']",
           "CallExpression[callee.object.name='O'][callee.property.name='fold']",
-          "CallExpression[callee.object.name='E'][callee.property.name='fromOption']",
-          "CallExpression[callee.property.name='then']"
+          "CallExpression[callee.object.name='E'][callee.property.name='fromOption']"
         ]
       }
     ]

@@ -136,6 +136,7 @@ export class OktaGroupService {
               // eslint-disable-next-line functional/immutable-data
               return groups.push(oktaGroupAsGroup(oktaGroup));
             })
+            // eslint-disable-next-line functional/functional-parameters
             .then(() => {
               return groups;
             })
