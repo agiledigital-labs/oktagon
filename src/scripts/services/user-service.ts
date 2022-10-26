@@ -64,7 +64,6 @@ export class OktaUserService {
    */
   readonly getUser = (userId: string): TE.TaskEither<string, O.Option<User>> =>
     TE.tryCatch(
-      // eslint-disable-next-line functional/functional-parameters
       () =>
         // eslint-disable-next-line functional/no-this-expression
         this.client
@@ -101,7 +100,7 @@ export class OktaUserService {
       },
     };
     return TE.tryCatch(
-      // eslint-disable-next-line functional/functional-parameters, functional/no-this-expression
+      // eslint-disable-next-line functional/no-this-expression
       () => this.client.createUser(userToCreate).then(oktaUserAsUser),
       (error: unknown) =>
         `Failed to create user [${email}] because of [${JSON.stringify(
@@ -122,7 +121,7 @@ export class OktaUserService {
       group,
       (group: Group) =>
         TE.tryCatch(
-          // eslint-disable-next-line functional/functional-parameters, functional/no-this-expression
+          // eslint-disable-next-line functional/no-this-expression
           () => this.client.getGroup(group.id),
           (error: unknown) => `Fail ${JSON.stringify(error)}`
         ),
@@ -140,7 +139,6 @@ export class OktaUserService {
     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
     TE.chain((maybeGroupOrClient: okta.Client | okta.Group) =>
       TE.tryCatch(
-        // eslint-disable-next-line functional/functional-parameters
         () => {
           // eslint-disable-next-line functional/prefer-readonly-type
           const users: User[] = [];
@@ -152,7 +150,6 @@ export class OktaUserService {
                 // eslint-disable-next-line functional/immutable-data
                 return users.push(oktaUserAsUser(oktaUser));
               })
-              // eslint-disable-next-line functional/functional-parameters
               .then(() => {
                 return users;
               })
@@ -165,7 +162,6 @@ export class OktaUserService {
 
   readonly deleteUser = (userId: string): TE.TaskEither<string, User> =>
     TE.tryCatch(
-      // eslint-disable-next-line functional/functional-parameters
       () =>
         // eslint-disable-next-line functional/no-this-expression, @typescript-eslint/prefer-readonly-parameter-types
         this.client.getUser(userId).then((user) =>
@@ -173,7 +169,6 @@ export class OktaUserService {
             .delete({
               sendEmail: false,
             })
-            // eslint-disable-next-line functional/functional-parameters
             .then(() => oktaUserAsUser(user))
         ),
       (error: unknown) =>
@@ -184,7 +179,6 @@ export class OktaUserService {
 
   readonly deactivateUser = (userId: string): TE.TaskEither<string, User> =>
     TE.tryCatch(
-      // eslint-disable-next-line functional/functional-parameters
       () =>
         // eslint-disable-next-line functional/no-this-expression, @typescript-eslint/prefer-readonly-parameter-types
         this.client.getUser(userId).then((user) =>
@@ -192,7 +186,6 @@ export class OktaUserService {
             .deactivate({
               sendEmail: false,
             })
-            // eslint-disable-next-line functional/functional-parameters
             .then(() => oktaUserAsUser(user))
         ),
       (error: unknown) =>

@@ -11,7 +11,6 @@ export const validateUserExists = (
 ): E.Either<NEA.NonEmptyArray<string>, User> =>
   pipe(
     maybeUser,
-    // eslint-disable-next-line functional/functional-parameters
     E.fromOption(() => NEA.of(`User [${user}] does not exist`))
   );
 
@@ -21,6 +20,5 @@ export const validateGroupExists = (
 ): E.Either<NEA.NonEmptyArray<string>, Group> =>
   pipe(
     maybeGroup,
-    // eslint-disable-next-line functional/functional-parameters
     E.fromOption(() => NEA.of(`Group [${group}] does not exist`))
   );

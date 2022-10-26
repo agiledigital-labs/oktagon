@@ -48,7 +48,6 @@ export class OktaGroupService {
     groupId: string
   ): TE.TaskEither<string, O.Option<Group>> =>
     TE.tryCatch(
-      // eslint-disable-next-line functional/functional-parameters
       () =>
         // eslint-disable-next-line functional/no-this-expression
         this.client
@@ -73,7 +72,6 @@ export class OktaGroupService {
   ): TE.TaskEither<string, string> =>
     pipe(
       TE.tryCatch(
-        // eslint-disable-next-line functional/functional-parameters
         () =>
           // eslint-disable-next-line functional/no-this-expression
           this.client
@@ -99,7 +97,6 @@ export class OktaGroupService {
   ): TE.TaskEither<string, string> =>
     pipe(
       TE.tryCatch(
-        // eslint-disable-next-line functional/functional-parameters
         () =>
           // eslint-disable-next-line functional/no-this-expression
           this.client
@@ -126,7 +123,6 @@ export class OktaGroupService {
     // does not allow for any form of mapping, so array mutation is needed.
 
     return TE.tryCatch(
-      // eslint-disable-next-line functional/functional-parameters
       () => {
         // eslint-disable-next-line functional/prefer-readonly-type
         const groups: Group[] = [];
@@ -140,7 +136,6 @@ export class OktaGroupService {
               // eslint-disable-next-line functional/immutable-data
               return groups.push(oktaGroupAsGroup(oktaGroup));
             })
-            // eslint-disable-next-line functional/functional-parameters
             .then(() => {
               return groups;
             })
