@@ -150,6 +150,7 @@ export class OktaUserService {
                 // eslint-disable-next-line functional/immutable-data
                 return users.push(oktaUserAsUser(oktaUser));
               })
+              // eslint-disable-next-line functional/functional-parameters
               .then(() => {
                 return users;
               })
@@ -169,6 +170,7 @@ export class OktaUserService {
             .delete({
               sendEmail: false,
             })
+            // eslint-disable-next-line functional/functional-parameters
             .then(() => oktaUserAsUser(user))
         ),
       (error: unknown) =>
@@ -186,6 +188,7 @@ export class OktaUserService {
             .deactivate({
               sendEmail: false,
             })
+            // eslint-disable-next-line functional/functional-parameters
             .then(() => oktaUserAsUser(user))
         ),
       (error: unknown) =>
