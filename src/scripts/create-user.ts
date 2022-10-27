@@ -24,7 +24,6 @@ const createUser = (
     TE.chain(
       flow(
         O.fold(
-          // eslint-disable-next-line functional/functional-parameters
           () => service.createUser(email, firstName, lastName, password),
           // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
           (user) =>

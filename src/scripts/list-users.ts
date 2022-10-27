@@ -58,7 +58,6 @@ export const usersInGroup = (
     groupService.getGroup(groupId),
     TE.chain(
       O.fold(
-        // eslint-disable-next-line functional/functional-parameters
         (): TE.TaskEither<string, Group> =>
           TE.left(`The group [${groupId}] does not exist`),
         (group: Group) => TE.right(group)
