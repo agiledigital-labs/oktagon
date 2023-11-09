@@ -9,8 +9,8 @@ import { UserService } from './services/user-service';
 import { baseUserService, user } from './__fixtures__/data-providers';
 import { getTemporaryUserPassword } from './get-temporary-user-password';
 
-describe('Activating users', () => {
-  it('passes when attempting get a temporary password for a user', async () => {
+describe('Getting a temporary password for a user', () => {
+  it('passes when attempting to get a temporary password for a user', async () => {
     // Given a user that is active
     const userService: UserService = {
       ...baseUserService(),
