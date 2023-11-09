@@ -9,25 +9,35 @@ import * as O from 'fp-ts/lib/Option';
 import { flow, pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
 
-const deactivateUser = (
+const getTemporaryUserPassword = (
   service: UserService,
   userId: string
-): TE.TaskEither<string, User> =>
+): TE.TaskEither<
+  string,
+  {
+    readonly user: User;
+    readonly temporaryPassword: string;
+  }
+> =>
   pipe(
     userId,
     service.getUser,
     TE.chain(
       flow(
         O.fold(
-          () => TE.left(`User [${userId}] does not exist. Cannot de-activate.`),
+          () =>
+            TE.left(
+              `User [${userId}] does not exist. Cannot get temporary user password.`
+            ),
           // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          (user) =>
-            user.deactivated ? TE.right(user) : service.deactivateUser(userId)
+          () => service.getTemporaryUserPassword(userId)
         )
       )
     ),
-    TE.chainFirstIOK((user) =>
-      Console.info(`Deactivated [${user.id}] [${user.email}].`)
+    TE.chainFirstIOK(({ user, temporaryPassword }) =>
+      Console.info(
+        `Retrieved temporary password for user [${user.id}] [${user.email}]. Temporary password is [${temporaryPassword}].`
+      )
     )
   );
 
@@ -41,8 +51,8 @@ export default (
   readonly userId: string;
 }> =>
   rootCommand.command(
-    'deactivate-user [user-id]',
-    'Deactivates the specified user, only works if user has not been deprovisioned.',
+    'get-temporary-user-password [user-id]',
+    'gets a temporary password for a user, only works if user currently has the status: staged, provisioned, or password expired.',
     // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => {
       // eslint-disable-next-line functional/no-expression-statement
@@ -61,7 +71,7 @@ export default (
       const client = oktaManageClient({ ...args });
       const service = new OktaUserService(client);
 
-      const result = await deactivateUser(service, args.userId)();
+      const result = await getTemporaryUserPassword(service, args.userId)();
 
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {

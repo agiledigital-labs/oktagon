@@ -146,7 +146,7 @@ describe.each([
       const result = await deleteUser(userService, user.id, force)();
       // Then we should have a left
       expect(result).toEqualLeft(
-        'User [user_id] does not exist. Can not delete.'
+        'User [user_id] does not exist. Cannot delete.'
       );
 
       // And we also expect the user service's deleteUser to not have been called

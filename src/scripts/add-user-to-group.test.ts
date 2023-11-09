@@ -43,7 +43,7 @@ describe('Adding a user to a group', () => {
   });
 
   it('fails if the user does not exist', async () => {
-    // Given a user service that can not locate the user.
+    // Given a user service that cannot locate the user.
     const userService = {
       ...test.baseUserService(),
       getUser: () => TE.right(O.none),
@@ -159,7 +159,7 @@ describe('Adding a user to a group', () => {
   });
 
   it('fails if both the group and the user do not exist', async () => {
-    // Given a user service that can not locate the user.
+    // Given a user service that cannot locate the user.
     const userService = {
       ...test.baseUserService(),
       getUser: () => TE.right(O.none),

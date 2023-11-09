@@ -28,7 +28,7 @@ const createUser = (
           // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
           (user) =>
             TE.left(
-              `User [${email}] already exists with id [${user.id}]. Can not create a new user.`
+              `User [${email}] already exists with id [${user.id}]. Cannot create a new user.`
             )
         )
       )
