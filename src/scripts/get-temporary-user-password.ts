@@ -9,7 +9,7 @@ import * as O from 'fp-ts/lib/Option';
 import { flow, pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
 
-const getTemporaryUserPassword = (
+export const getTemporaryUserPassword = (
   service: UserService,
   userId: string
 ): TE.TaskEither<
@@ -52,7 +52,7 @@ export default (
 }> =>
   rootCommand.command(
     'get-temporary-user-password [user-id]',
-    'gets a temporary password for a user, only works if user currently has the status: staged, provisioned, or password expired.',
+    'gets a temporary password for a user, only works if user currently has the status: staged, provisioned, locked out or password expired.',
     // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => {
       // eslint-disable-next-line functional/no-expression-statement

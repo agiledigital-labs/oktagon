@@ -9,7 +9,7 @@ import * as O from 'fp-ts/lib/Option';
 import { flow, pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
 
-const activateUser = (
+export const activateUser = (
   service: UserService,
   userId: string
 ): TE.TaskEither<string, User> =>
