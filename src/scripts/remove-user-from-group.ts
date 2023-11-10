@@ -44,7 +44,8 @@ const removeUserFromGroup = (
             ),
             E.mapLeft(
               // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-              (errors) => `${errors.join('. ')}. Cannot remove user from group.`
+              (errors) =>
+                `${errors.join('. ')}. Can not remove user from group.`
             ),
             TE.fromEither,
             // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types

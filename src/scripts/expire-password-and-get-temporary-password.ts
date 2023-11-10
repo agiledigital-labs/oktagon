@@ -4,10 +4,10 @@ import { OktaUserService, User, UserService } from './services/user-service';
 import { oktaManageClient } from './services/client-service';
 import * as TE from 'fp-ts/lib/TaskEither';
 import * as E from 'fp-ts/lib/Either';
-import { pipe } from 'fp-ts/lib/function';
+import { flow, pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
 import * as okta from '@okta/okta-sdk-nodejs';
-import { retrieveUser } from '../common';
+import * as O from 'fp-ts/lib/Option';
 
 /**
  * Expires the password for a user and gets a temporary password for them, only works if user currently has the status: active, staged, provisioned, locked out, recovery, or password expired.
@@ -26,7 +26,20 @@ export const expirePasswordAndGetTemporaryPassword = (
   }
 > =>
   pipe(
-    retrieveUser(service, userId),
+    userId,
+    service.getUser,
+    TE.chain(
+      flow(
+        O.fold(
+          () =>
+            TE.left(
+              `User [${userId}] does not exist. Can not expire password.`
+            ),
+          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+          (user) => TE.right(user)
+        )
+      )
+    ),
     TE.tapIO((user) =>
       Console.info(
         `Prior to password expiration, the user has status: [${user.status}].`

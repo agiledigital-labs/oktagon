@@ -5,9 +5,9 @@ import * as okta from '@okta/okta-sdk-nodejs';
 import { oktaManageClient } from './services/client-service';
 import * as TE from 'fp-ts/lib/TaskEither';
 import * as E from 'fp-ts/lib/Either';
-import { pipe } from 'fp-ts/lib/function';
+import { flow, pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
-import { retrieveUser } from '../common';
+import * as O from 'fp-ts/lib/Option';
 
 /**
  * Activates a user, only works if user currently has the status: staged or deprovisioned.
@@ -20,7 +20,17 @@ export const activateUser = (
   userId: string
 ): TE.TaskEither<string, User> =>
   pipe(
-    retrieveUser(service, userId),
+    userId,
+    service.getUser,
+    TE.chain(
+      flow(
+        O.fold(
+          () => TE.left(`User [${userId}] does not exist. Can not activate.`),
+          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+          (user) => TE.right(user)
+        )
+      )
+    ),
     TE.tapIO((user) =>
       Console.info(
         `Prior to activation, the user has status: [${user.status}].`

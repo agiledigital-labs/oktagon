@@ -122,7 +122,9 @@ describe('Expiring the password for a user and getting a temporary password for 
     )();
 
     // Then we should have a left
-    expect(result).toEqualLeft('User [user_id] does not exist.');
+    expect(result).toEqualLeft(
+      'User [user_id] does not exist. Can not expire password.'
+    );
     expect(
       userService.expirePasswordAndGetTemporaryPassword
     ).not.toHaveBeenCalled();

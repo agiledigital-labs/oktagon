@@ -65,7 +65,9 @@ describe('Activating users', () => {
     const result = await activateUser(userService, deactivatedUser.id)();
 
     // Then we should have a left
-    expect(result).toEqualLeft('User [user_id] does not exist.');
+    expect(result).toEqualLeft(
+      'User [user_id] does not exist. Can not activate.'
+    );
     expect(userService.activateUser).not.toHaveBeenCalled();
   });
 

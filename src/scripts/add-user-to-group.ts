@@ -44,7 +44,7 @@ export const addUserToGroup = (
         ),
         E.mapLeft(
           // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          (errors) => `${errors.join('. ')}. Cannot add user to group.`
+          (errors) => `${errors.join('. ')}. Can not add user to group.`
         )
       )
     ),
