@@ -66,35 +66,33 @@ describe('Activating users', () => {
     const result = await activateUser(userService, deactivatedUser.id)();
 
     // Then we should have a left
-    expect(result).toEqualLeft(
-      'User [user_id] does not exist. Cannot activate.'
-    );
+    expect(result).toEqualLeft('User [user_id] does not exist.');
     expect(userService.activateUser).not.toHaveBeenCalled();
   });
 
   it.each([
     [
-      'ACTIVE',
+      okta.UserStatus.ACTIVE,
       `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. User [user_id] is already ${okta.UserStatus.ACTIVE}.`,
     ],
     [
-      'PROVISIONED',
+      okta.UserStatus.PROVISIONED,
       `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please follow through with the activation workflow.`,
     ],
     [
-      'LOCKED_OUT',
+      okta.UserStatus.LOCKED_OUT,
       `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please use the unlock command.`,
     ],
     [
-      'PASSWORD_EXPIRED',
+      okta.UserStatus.PASSWORD_EXPIRED,
       `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please instruct user to login with temporary password and follow the password reset process.`,
     ],
     [
-      'RECOVERY',
+      okta.UserStatus.RECOVERY,
       `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please follow through with the activation workflow or restart the workflow using the reactivate-user command.`,
     ],
     [
-      'SUSPENDED',
+      okta.UserStatus.SUSPENDED,
       `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please use the unsuspend-user command.`,
     ],
   ])(
@@ -103,8 +101,7 @@ describe('Activating users', () => {
       // Given a user with status status
       const user: User = {
         ...deactivatedUser,
-        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-        status: status as okta.UserStatus,
+        status: status,
       };
       const userService: UserService = {
         ...baseUserService(),

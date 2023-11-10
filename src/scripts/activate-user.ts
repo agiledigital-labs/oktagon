@@ -7,42 +7,37 @@ import * as okta from '@okta/okta-sdk-nodejs';
 import { oktaManageClient } from './services/client-service';
 import * as TE from 'fp-ts/lib/TaskEither';
 import * as E from 'fp-ts/lib/Either';
-import * as O from 'fp-ts/lib/Option';
-import { flow, pipe } from 'fp-ts/lib/function';
+import { pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
+import { retrieveUser } from '../common';
 
+/**
+ * Activates a user, only works if user currently has the status: staged or deprovisioned.
+ * @param service - the service to use to activate the user.
+ * @param userId - the id of the user to activate.
+ * @returns a TaskEither that resolves to the activated user.
+ */
 export const activateUser = (
   service: UserService,
   userId: string
 ): TE.TaskEither<string, User> =>
   pipe(
-    getUser(service, userId),
-    TE.chain((user) => checkUserStatusPriorToActivation(user)),
+    retrieveUser(service, userId),
+    TE.chainFirstIOK((user) =>
+      Console.info(
+        `Prior to activation, the user has status: [${user.status}].`
+      )
+    ),
+    TE.chain((user) => priorToActivationkUserStatusCheck(user)),
     TE.chain((user) => service.activateUser(user.id)),
     TE.chainFirstIOK((user) =>
-      Console.info(`Activated [${user.id}] [${user.email}].`)
-    )
-  );
-
-export const getUser = (
-  service: UserService,
-  userId: string
-): TE.TaskEither<string, User> =>
-  pipe(
-    userId,
-    service.getUser,
-    TE.chain(
-      flow(
-        O.fold(
-          () => TE.left(`User [${userId}] does not exist. Cannot activate.`),
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          (user) => TE.right(user)
-        )
+      Console.info(
+        `Activated [${user.id}] [${user.email}]. The status of the user is now [${user.status}].`
       )
     )
   );
 
-export const checkUserStatusPriorToActivation = (
+const priorToActivationkUserStatusCheck = (
   user: User
 ): TE.TaskEither<string, User> => {
   const activeStatus = okta.UserStatus.ACTIVE;
