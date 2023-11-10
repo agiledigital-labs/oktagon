@@ -14,14 +14,13 @@ import {
 import { activateUser } from './activate-user';
 
 describe('Activating users', () => {
-  it.each(['DEPROVISIONED', 'STAGED'])(
+  it.each([okta.UserStatus.DEPROVISIONED, okta.UserStatus.STAGED])(
     'passes when attempting to activate a user with status %s',
     async (status) => {
       // Given a user with status status
       const user: User = {
         ...deactivatedUser,
-        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-        status: status as okta.UserStatus,
+        status: status,
       };
       const userService: UserService = {
         ...baseUserService(),
