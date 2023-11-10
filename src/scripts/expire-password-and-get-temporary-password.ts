@@ -1,6 +1,5 @@
 import { Argv } from 'yargs';
 import { RootCommand } from '..';
-
 import { OktaUserService, User, UserService } from './services/user-service';
 import { oktaManageClient } from './services/client-service';
 import * as TE from 'fp-ts/lib/TaskEither';
@@ -28,14 +27,14 @@ export const expirePasswordAndGetTemporaryPassword = (
 > =>
   pipe(
     retrieveUser(service, userId),
-    TE.chainFirstIOK((user) =>
+    TE.tapIO((user) =>
       Console.info(
         `Prior to password expiration, the user has status: [${user.status}].`
       )
     ),
     TE.chain((user) => priorToPasswordExpirationUserStatusCheck(user)),
     TE.chain((user) => service.expirePasswordAndGetTemporaryPassword(user.id)),
-    TE.chainFirstIOK(({ user, temporaryPassword }) =>
+    TE.tapIO(({ user, temporaryPassword }) =>
       Console.info(
         `Expired password for user [${user.id}] [${user.email}]. Temporary password is [${temporaryPassword}].`
       )

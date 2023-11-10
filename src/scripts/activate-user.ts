@@ -1,9 +1,7 @@
 import { Argv } from 'yargs';
 import { RootCommand } from '..';
-
 import { OktaUserService, User, UserService } from './services/user-service';
 import * as okta from '@okta/okta-sdk-nodejs';
-
 import { oktaManageClient } from './services/client-service';
 import * as TE from 'fp-ts/lib/TaskEither';
 import * as E from 'fp-ts/lib/Either';
@@ -23,18 +21,14 @@ export const activateUser = (
 ): TE.TaskEither<string, User> =>
   pipe(
     retrieveUser(service, userId),
-    TE.chainFirstIOK((user) =>
+    TE.tapIO((user) =>
       Console.info(
         `Prior to activation, the user has status: [${user.status}].`
       )
     ),
     TE.chain((user) => priorToActivationkUserStatusCheck(user)),
     TE.chain((user) => service.activateUser(user.id)),
-    TE.chainFirstIOK((user) =>
-      Console.info(
-        `Activated [${user.id}] [${user.email}]. The status of the user is now [${user.status}].`
-      )
-    )
+    TE.tapIO((user) => Console.info(`Activated [${user.id}] [${user.email}].`))
   );
 
 const priorToActivationkUserStatusCheck = (
