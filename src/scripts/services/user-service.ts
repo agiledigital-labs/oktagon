@@ -215,7 +215,7 @@ export class OktaUserService {
         )}].`
     );
 
-  readonly getTemporaryUserPassword = (
+  readonly expirePasswordAndGetTemporaryPassword = (
     userId: string
   ): TE.TaskEither<
     string,
@@ -248,5 +248,5 @@ export type UserService = {
   readonly deleteUser: OktaUserService['deleteUser'];
   readonly deactivateUser: OktaUserService['deactivateUser'];
   readonly activateUser: OktaUserService['activateUser'];
-  readonly getTemporaryUserPassword: OktaUserService['getTemporaryUserPassword'];
+  readonly expirePasswordAndGetTemporaryPassword: OktaUserService['expirePasswordAndGetTemporaryPassword'];
 };

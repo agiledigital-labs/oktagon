@@ -2,6 +2,8 @@ import { Argv } from 'yargs';
 import { RootCommand } from '..';
 
 import { OktaUserService, User, UserService } from './services/user-service';
+import * as okta from '@okta/okta-sdk-nodejs';
+
 import { oktaManageClient } from './services/client-service';
 import * as TE from 'fp-ts/lib/TaskEither';
 import * as E from 'fp-ts/lib/Either';
@@ -14,6 +16,19 @@ export const activateUser = (
   userId: string
 ): TE.TaskEither<string, User> =>
   pipe(
+    getUser(service, userId),
+    TE.chain((user) => checkUserStatusPriorToActivation(user)),
+    TE.chain((user) => service.activateUser(user.id)),
+    TE.chainFirstIOK((user) =>
+      Console.info(`Activated [${user.id}] [${user.email}].`)
+    )
+  );
+
+export const getUser = (
+  service: UserService,
+  userId: string
+): TE.TaskEither<string, User> =>
+  pipe(
     userId,
     service.getUser,
     TE.chain(
@@ -21,14 +36,55 @@ export const activateUser = (
         O.fold(
           () => TE.left(`User [${userId}] does not exist. Cannot activate.`),
           // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          () => service.activateUser(userId)
+          (user) => TE.right(user)
         )
       )
-    ),
-    TE.chainFirstIOK((user) =>
-      Console.info(`Activated [${user.id}] [${user.email}].`)
     )
   );
+
+export const checkUserStatusPriorToActivation = (
+  user: User
+): TE.TaskEither<string, User> => {
+  const activeStatus = okta.UserStatus.ACTIVE;
+  // eslint-disable-next-line sonarjs/no-small-switch, functional/no-conditional-statement
+  switch (user.status) {
+    case okta.UserStatus.ACTIVE: {
+      return TE.left(
+        `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. User [${user.id}] is already ${okta.UserStatus.ACTIVE}.`
+      );
+    }
+    case okta.UserStatus.PROVISIONED: {
+      return TE.left(
+        `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ${activeStatus} status, please follow through with the activation workflow.`
+      );
+    }
+
+    case okta.UserStatus.LOCKED_OUT: {
+      return TE.left(
+        `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ${activeStatus} status, please use the unlock command.`
+      );
+    }
+    case okta.UserStatus.PASSWORD_EXPIRED: {
+      return TE.left(
+        `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ${activeStatus} status, please instruct user to login with temporary password and follow the password reset process.`
+      );
+    }
+    case okta.UserStatus.RECOVERY: {
+      return TE.left(
+        `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ${activeStatus} status, please follow through with the activation workflow or restart the workflow using the reactivate-user command.`
+      );
+    }
+    case okta.UserStatus.SUSPENDED: {
+      return TE.left(
+        `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ${activeStatus} status, please use the unsuspend-user command.`
+      );
+    }
+    // STAGED or DEPROVISIONED user status
+    default: {
+      return TE.right(user);
+    }
+  }
+};
 
 export default (
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
@@ -59,8 +115,8 @@ export default (
     }) => {
       const client = oktaManageClient({ ...args });
       const service = new OktaUserService(client);
-
-      const result = await activateUser(service, args.userId)();
+      const userId = args.userId;
+      const result = await activateUser(service, userId)();
 
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {

@@ -37,7 +37,7 @@ export const baseUserService = (): UserService => ({
   listUsers: returnLeftTE,
   listUsersInGroup: returnLeftTE,
   activateUser: returnLeftTE,
-  getTemporaryUserPassword: returnLeftTE,
+  expirePasswordAndGetTemporaryPassword: returnLeftTE,
 });
 
 export const baseGroupService = (): GroupService => ({

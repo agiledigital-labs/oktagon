@@ -4,42 +4,50 @@
 /* eslint-disable functional/functional-parameters */
 import * as TE from 'fp-ts/TaskEither';
 import * as O from 'fp-ts/Option';
-import { UserService } from './services/user-service';
+import { User, UserService } from './services/user-service';
+import * as okta from '@okta/okta-sdk-nodejs';
 
 import {
   baseUserService,
   deactivatedUser,
-  user,
 } from './__fixtures__/data-providers';
 import { activateUser } from './activate-user';
 
 describe('Activating users', () => {
-  it('passes when attempting to activate a user', async () => {
-    // Given a user that is deactivated
-    const userService: UserService = {
-      ...baseUserService(),
-      activateUser: jest.fn(() => TE.right(deactivatedUser)),
-      getUser: () => TE.right(O.some(deactivatedUser)),
-    };
+  it.each(['DEPROVISIONED', 'STAGED'])(
+    'passes when attempting to activate a user with status %s',
+    async (status) => {
+      // Given a user with status status
+      const user: User = {
+        ...deactivatedUser,
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+        status: status as okta.UserStatus,
+      };
+      const userService: UserService = {
+        ...baseUserService(),
+        activateUser: jest.fn(() => TE.right(user)),
+        getUser: () => TE.right(O.some(user)),
+      };
 
-    // When we attempt to activate the user
-    const result = await activateUser(userService, deactivatedUser.id)();
+      // When we attempt to activate a user with status that isn't DEPROVISIONED or STAGED
+      const result = await activateUser(userService, user.id)();
 
-    // Then the user should be returned
-    expect(result).toEqualRight(deactivatedUser);
-    expect(userService.activateUser).toHaveBeenCalled();
-  });
+      // Then we should have a left
+      expect(result).toEqualRight(user);
+      expect(userService.activateUser).toHaveBeenCalled();
+    }
+  );
 
   it('fails when attempting to activate a user and the request fails', async () => {
     // Given a user
     const userService: UserService = {
       ...baseUserService(),
       activateUser: jest.fn(() => TE.left('expected error')),
-      getUser: () => TE.right(O.some(user)),
+      getUser: () => TE.right(O.some(deactivatedUser)),
     };
 
     // When we attempt to activate the user and the request fails
-    const result = await activateUser(userService, user.id)();
+    const result = await activateUser(userService, deactivatedUser.id)();
 
     // Then we should have a left
     expect(result).toEqualLeft('expected error');
@@ -50,12 +58,12 @@ describe('Activating users', () => {
     // Given a user that does not exist
     const userService: UserService = {
       ...baseUserService(),
-      activateUser: jest.fn(() => TE.right(user)),
+      activateUser: jest.fn(() => TE.right(deactivatedUser)),
       getUser: () => TE.right(O.none),
     };
 
     // When we attempt to activate a non-existent user
-    const result = await activateUser(userService, user.id)();
+    const result = await activateUser(userService, deactivatedUser.id)();
 
     // Then we should have a left
     expect(result).toEqualLeft(
@@ -64,16 +72,65 @@ describe('Activating users', () => {
     expect(userService.activateUser).not.toHaveBeenCalled();
   });
 
+  it.each([
+    [
+      'ACTIVE',
+      `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. User [user_id] is already ${okta.UserStatus.ACTIVE}.`,
+    ],
+    [
+      'PROVISIONED',
+      `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please follow through with the activation workflow.`,
+    ],
+    [
+      'LOCKED_OUT',
+      `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please use the unlock command.`,
+    ],
+    [
+      'PASSWORD_EXPIRED',
+      `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please instruct user to login with temporary password and follow the password reset process.`,
+    ],
+    [
+      'RECOVERY',
+      `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please follow through with the activation workflow or restart the workflow using the reactivate-user command.`,
+    ],
+    [
+      'SUSPENDED',
+      `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please use the unsuspend-user command.`,
+    ],
+  ])(
+    'fails when attempting to activate a user with status %s',
+    async (status, errorMessage) => {
+      // Given a user with status status
+      const user: User = {
+        ...deactivatedUser,
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+        status: status as okta.UserStatus,
+      };
+      const userService: UserService = {
+        ...baseUserService(),
+        activateUser: jest.fn(() => TE.right(user)),
+        getUser: () => TE.right(O.some(user)),
+      };
+
+      // When we attempt to activate a user with status that isn't DEPROVISIONED or STAGED
+      const result = await activateUser(userService, user.id)();
+
+      // Then we should have a left
+      expect(result).toEqualLeft(errorMessage);
+      expect(userService.activateUser).not.toHaveBeenCalled();
+    }
+  );
+
   it('fails when retrieving the user fails', async () => {
     // Given that activateUser works, but getUser retrieves no valid users
     const userService: UserService = {
       ...baseUserService(),
-      activateUser: jest.fn(() => TE.right(user)),
+      activateUser: jest.fn(() => TE.right(deactivatedUser)),
       getUser: () => TE.left('expected error'),
     };
 
     // When we attempt to activate a user but retrieving the user fails
-    const result = await activateUser(userService, user.id)();
+    const result = await activateUser(userService, deactivatedUser.id)();
 
     // Then we should have a left
     expect(result).toEqualLeft('expected error');
