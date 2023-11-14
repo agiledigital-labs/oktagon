@@ -38,7 +38,7 @@ export const activateUser = (
         `Prior to activation, the user has status: [${user.status}].`
       )
     ),
-    TE.chain((user) => priorToActivationkUserStatusCheck(user)),
+    TE.chain((user) => priorToActivationUserStatusCheck(user)),
     TE.chain((user) =>
       dryRun ? TE.right(user) : service.activateUser(user.id)
     ),
@@ -51,7 +51,7 @@ export const activateUser = (
     )
   );
 
-const priorToActivationkUserStatusCheck = (
+const priorToActivationUserStatusCheck = (
   user: User
 ): TE.TaskEither<string, User> => {
   const activeStatus = okta.UserStatus.ACTIVE;
