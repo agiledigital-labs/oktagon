@@ -13,11 +13,13 @@ import * as O from 'fp-ts/lib/Option';
  * Activates a user, only works if user currently has the status: staged or deprovisioned.
  * @param service - the service to use to activate the user.
  * @param userId - the id of the user to activate.
+ * @param dryRun - if true, will not actually activate the user, but will print out what would happen.
  * @returns a TaskEither that resolves to the activated user.
  */
 export const activateUser = (
   service: UserService,
-  userId: string
+  userId: string,
+  dryRun: boolean
 ): TE.TaskEither<string, User> =>
   pipe(
     userId,
@@ -37,8 +39,16 @@ export const activateUser = (
       )
     ),
     TE.chain((user) => priorToActivationkUserStatusCheck(user)),
-    TE.chain((user) => service.activateUser(user.id)),
-    TE.tapIO((user) => Console.info(`Activated [${user.id}] [${user.email}].`))
+    TE.chain((user) =>
+      dryRun ? TE.right(user) : service.activateUser(user.id)
+    ),
+    TE.tapIO((user) =>
+      Console.info(
+        dryRun
+          ? `Will attempt to activate [${user.id}] [${user.email}].`
+          : `Activated [${user.id}] [${user.email}].`
+      )
+    )
   );
 
 const priorToActivationkUserStatusCheck = (
@@ -93,6 +103,7 @@ export default (
   readonly privateKey: string;
   readonly organisationUrl: string;
   readonly userId: string;
+  readonly dryRun: boolean;
 }> =>
   rootCommand.command(
     'activate-user [user-id]',
@@ -100,22 +111,31 @@ export default (
     // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => {
       // eslint-disable-next-line functional/no-expression-statement
-      yargs.positional('user-id', {
-        describe: 'a unique identifier for the server',
-        type: 'string',
-        demandOption: true,
-      });
+      yargs
+        .option('dry-run', {
+          type: 'boolean',
+          describe:
+            'if true, will not actually activate the user, but will print out the user status.',
+          demandOption: false,
+          default: false,
+        })
+        .positional('user-id', {
+          describe: 'a unique identifier for the server',
+          type: 'string',
+          demandOption: true,
+        });
     },
     async (args: {
       readonly clientId: string;
       readonly privateKey: string;
       readonly organisationUrl: string;
       readonly userId: string;
+      readonly dryRun: boolean;
     }) => {
       const client = oktaManageClient({ ...args });
       const service = new OktaUserService(client);
-      const userId = args.userId;
-      const result = await activateUser(service, userId)();
+      const { userId, dryRun } = args;
+      const result = await activateUser(service, userId, dryRun)();
 
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {
