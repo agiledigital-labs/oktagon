@@ -29,13 +29,29 @@ describe('Activating users', () => {
       };
 
       // When we attempt to activate a user with status that isn't DEPROVISIONED or STAGED
-      const result = await activateUser(userService, user.id)();
+      const result = await activateUser(userService, user.id, false)();
 
       // Then we should have a left
       expect(result).toEqualRight(user);
       expect(userService.activateUser).toHaveBeenCalled();
     }
   );
+
+  it('does not attempt to activate a user if dryRun is true', async () => {
+    // Given a DEPROVISIONED user
+    const userService: UserService = {
+      ...baseUserService(),
+      activateUser: jest.fn(() => TE.right(deactivatedUser)),
+      getUser: () => TE.right(O.some(deactivatedUser)),
+    };
+
+    // When we attempt to activate the user in dry run mode
+    const result = await activateUser(userService, deactivatedUser.id, true)();
+
+    // Then the activateUser function should not have been called
+    expect(result).toEqualRight(deactivatedUser);
+    expect(userService.activateUser).not.toHaveBeenCalled();
+  });
 
   it('fails when attempting to activate a user and the request fails', async () => {
     // Given a user
@@ -46,7 +62,7 @@ describe('Activating users', () => {
     };
 
     // When we attempt to activate the user and the request fails
-    const result = await activateUser(userService, deactivatedUser.id)();
+    const result = await activateUser(userService, deactivatedUser.id, false)();
 
     // Then we should have a left
     expect(result).toEqualLeft('expected error');
@@ -62,7 +78,7 @@ describe('Activating users', () => {
     };
 
     // When we attempt to activate a non-existent user
-    const result = await activateUser(userService, deactivatedUser.id)();
+    const result = await activateUser(userService, deactivatedUser.id, false)();
 
     // Then we should have a left
     expect(result).toEqualLeft(
@@ -111,7 +127,7 @@ describe('Activating users', () => {
       };
 
       // When we attempt to activate a user with status that isn't DEPROVISIONED or STAGED
-      const result = await activateUser(userService, user.id)();
+      const result = await activateUser(userService, user.id, false)();
 
       // Then we should have a left
       expect(result).toEqualLeft(errorMessage);
@@ -128,7 +144,7 @@ describe('Activating users', () => {
     };
 
     // When we attempt to activate a user but retrieving the user fails
-    const result = await activateUser(userService, deactivatedUser.id)();
+    const result = await activateUser(userService, deactivatedUser.id, false)();
 
     // Then we should have a left
     expect(result).toEqualLeft('expected error');

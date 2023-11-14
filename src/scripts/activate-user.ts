@@ -115,7 +115,7 @@ export default (
         .option('dry-run', {
           type: 'boolean',
           describe:
-            'if true, will not actually activate the user, but will print out the user status.',
+            'if true, will not activate the user, but will print out the user status.',
           demandOption: false,
           default: false,
         })

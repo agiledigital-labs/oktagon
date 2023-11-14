@@ -37,10 +37,11 @@ describe('Expiring the password for a user and getting a temporary password for 
         getUser: () => TE.right(O.some(userWithStatus)),
       };
 
-      // When we attempt to expire the password for a user and get a temporary password that is active, staged, provisioned, locked out, recovery, or password expired
+      // When we attempt to expire the password for a user that is active, staged, provisioned, locked out, recovery, or password
       const result = await expirePasswordAndGetTemporaryPassword(
         userService,
-        user.id
+        user.id,
+        false
       )();
 
       // Then the user should be returned
@@ -53,6 +54,36 @@ describe('Expiring the password for a user and getting a temporary password for 
       ).toHaveBeenCalled();
     }
   );
+
+  it('does not attempt to expire the password of a user if dryRun is true', async () => {
+    // Given a user
+    const userService: UserService = {
+      ...baseUserService(),
+      expirePasswordAndGetTemporaryPassword: jest.fn(() =>
+        TE.right({
+          user: user,
+          temporaryPassword: 'temporaryPassword',
+        })
+      ),
+      getUser: () => TE.right(O.some(user)),
+    };
+
+    // When we attempt to expire the password for a user and get a temporary password in dry run mode
+    const result = await expirePasswordAndGetTemporaryPassword(
+      userService,
+      user.id,
+      true
+    )();
+
+    // Then the user should be returned and the expirePasswordAndGetTemporaryPassword function should not have been called
+    expect(result).toEqualRight({
+      user: user,
+      temporaryPassword: '',
+    });
+    expect(
+      userService.expirePasswordAndGetTemporaryPassword
+    ).not.toHaveBeenCalled();
+  });
 
   it('fails when attempting to expire the password for a user and get a temporary password and the request fails', async () => {
     // Given a user
@@ -67,7 +98,8 @@ describe('Expiring the password for a user and getting a temporary password for 
     // When we attempt to expire the password for a user and get a temporary password and the request fails
     const result = await expirePasswordAndGetTemporaryPassword(
       userService,
-      user.id
+      user.id,
+      false
     )();
 
     // Then we should have a left
@@ -89,10 +121,11 @@ describe('Expiring the password for a user and getting a temporary password for 
         getUser: () => TE.right(O.some({ ...user, status })),
       };
 
-      // When we attempt to expire the password for a user and get a temporary password that is not active, staged, provisioned, locked out, recovery, or password expired
+      // When we attempt to expire the password for a user that is not active, staged, provisioned, locked out, recovery, or password expired
       const result = await expirePasswordAndGetTemporaryPassword(
         userService,
-        user.id
+        user.id,
+        false
       )();
 
       // Then we should have a left
@@ -118,7 +151,8 @@ describe('Expiring the password for a user and getting a temporary password for 
     // When we attempt to expire the password for a non-existent user and get a temporary password
     const result = await expirePasswordAndGetTemporaryPassword(
       userService,
-      user.id
+      user.id,
+      false
     )();
 
     // Then we should have a left
@@ -143,7 +177,8 @@ describe('Expiring the password for a user and getting a temporary password for 
     // When we attempt to expire the password for a user and get a temporary password but retrieving the user fails
     const result = await expirePasswordAndGetTemporaryPassword(
       userService,
-      user.id
+      user.id,
+      false
     )();
 
     // Then we should have a left

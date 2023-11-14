@@ -13,11 +13,13 @@ import * as O from 'fp-ts/lib/Option';
  * Expires the password for a user and gets a temporary password for them, only works if user currently has the status: active, staged, provisioned, locked out, recovery, or password expired.
  * @param service - the service to use to expire the password and get a temporary password.
  * @param userId - the id of the user to expire the password and get a temporary password for.
+ * @param dryRun - if true, will not expire the password of the user, but will print out what would happen.
  * @returns a TaskEither that resolves to the user and temporary password.
  */
 export const expirePasswordAndGetTemporaryPassword = (
   service: UserService,
-  userId: string
+  userId: string,
+  dryRun: boolean
 ): TE.TaskEither<
   string,
   {
@@ -46,10 +48,19 @@ export const expirePasswordAndGetTemporaryPassword = (
       )
     ),
     TE.chain((user) => priorToPasswordExpirationUserStatusCheck(user)),
-    TE.chain((user) => service.expirePasswordAndGetTemporaryPassword(user.id)),
+    TE.chain((user) =>
+      dryRun
+        ? TE.right({
+            user: user,
+            temporaryPassword: '',
+          })
+        : service.expirePasswordAndGetTemporaryPassword(user.id)
+    ),
     TE.tapIO(({ user, temporaryPassword }) =>
       Console.info(
-        `Expired password for user [${user.id}] [${user.email}]. Temporary password is [${temporaryPassword}].`
+        dryRun
+          ? `Will attempt to expire the password of the user [${user.id}] [${user.email}].`
+          : `Expired password for user [${user.id}] [${user.email}]. Temporary password is [${temporaryPassword}].`
       )
     )
   );
@@ -79,6 +90,7 @@ export default (
   readonly privateKey: string;
   readonly organisationUrl: string;
   readonly userId: string;
+  readonly dryRun: boolean;
 }> =>
   rootCommand.command(
     'expire-password-and-get-temporary-password [user-id]',
@@ -86,23 +98,34 @@ export default (
     // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => {
       // eslint-disable-next-line functional/no-expression-statement
-      yargs.positional('user-id', {
-        describe: 'a unique identifier for the server',
-        type: 'string',
-        demandOption: true,
-      });
+      yargs
+        .option('dry-run', {
+          type: 'boolean',
+          describe:
+            'if true, will not expire the password of the user, but will print out the user status.',
+          demandOption: false,
+          default: false,
+        })
+        .positional('user-id', {
+          describe: 'a unique identifier for the server',
+          type: 'string',
+          demandOption: true,
+        });
     },
     async (args: {
       readonly clientId: string;
       readonly privateKey: string;
       readonly organisationUrl: string;
       readonly userId: string;
+      readonly dryRun: boolean;
     }) => {
       const client = oktaManageClient({ ...args });
       const service = new OktaUserService(client);
+      const { userId, dryRun } = args;
       const result = await expirePasswordAndGetTemporaryPassword(
         service,
-        args.userId
+        userId,
+        dryRun
       )();
 
       // eslint-disable-next-line functional/no-conditional-statement
