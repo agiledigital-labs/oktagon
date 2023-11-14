@@ -10,16 +10,21 @@ import * as Console from 'fp-ts/lib/Console';
 import * as O from 'fp-ts/lib/Option';
 
 /**
- * Activates a user, only works if user currently has the status: staged or deprovisioned.
- * @param service - the service to use to activate the user.
- * @param userId - the id of the user to activate.
- * @param dryRun - if true, will not actually activate the user, but will print out what would happen.
- * @returns a TaskEither that resolves to the activated user.
+ * User that can be activated.
  */
-export const activateUser = (
+type ActivatableUser = User & {
+  readonly status: okta.UserStatus.DEPROVISIONED | okta.UserStatus.STAGED;
+};
+
+/**
+ * Checks to see if user exists
+ * @param service - the service to use to get the user.
+ * @param userId - the id of the user to get.
+ * @returns a TaskEither that resolves to the user if the user exists, otherwise an error message.
+ */
+const validateUserExist = (
   service: UserService,
-  userId: string,
-  dryRun: boolean
+  userId: string
 ): TE.TaskEither<string, User> =>
   pipe(
     userId,
@@ -37,23 +42,17 @@ export const activateUser = (
       Console.info(
         `Prior to activation, the user has status: [${user.status}].`
       )
-    ),
-    TE.chain((user) => priorToActivationUserStatusCheck(user)),
-    TE.chain((user) =>
-      dryRun ? TE.right(user) : service.activateUser(user.id)
-    ),
-    TE.tapIO((user) =>
-      Console.info(
-        dryRun
-          ? `Will attempt to activate [${user.id}] [${user.email}].`
-          : `Activated [${user.id}] [${user.email}].`
-      )
     )
   );
 
-const priorToActivationUserStatusCheck = (
+/**
+ * Checks to see if user has a status of staged or deprovisioned
+ * @param user - the user to check the status of.
+ * @returns - a TaskEither that resolves to the user if the user has a status of staged or deprovisioned, otherwise an error message.
+ */
+const validateUserStatus = (
   user: User
-): TE.TaskEither<string, User> => {
+): TE.TaskEither<string, ActivatableUser> => {
   const activeStatus = okta.UserStatus.ACTIVE;
   // eslint-disable-next-line sonarjs/no-small-switch, functional/no-conditional-statement
   switch (user.status) {
@@ -90,10 +89,66 @@ const priorToActivationUserStatusCheck = (
     }
     // STAGED or DEPROVISIONED user status
     default: {
-      return TE.right(user);
+      return TE.right({
+        ...user,
+        status: user.status,
+      });
     }
   }
 };
+
+/**
+ * Prints out what would happen if the user was activated.
+ * @param eitherUser - either the user or an error message.
+ * @returns a TaskEither that resolves to the user.
+ */
+const dryRunActivateUser = (
+  eitherUser: TE.TaskEither<string, ActivatableUser>
+): TE.TaskEither<string, User> =>
+  pipe(
+    eitherUser,
+    TE.tapIO((user) =>
+      Console.info(`Will attempt to activate [${user.id}] [${user.email}].`)
+    )
+  );
+
+/**
+ * Activates the user.
+ * @param service - the service to use to activate the user.
+ * @param eitherUser - either the user or an error message.
+ * @returns a TaskEither that resolves to the activated user.
+ */
+const activateUser = (
+  service: UserService,
+  eitherUser: TE.TaskEither<string, ActivatableUser>
+): TE.TaskEither<string, User> =>
+  pipe(
+    eitherUser,
+    TE.chain((user) => service.activateUser(user.id)),
+    TE.tapIO((user) => Console.info(`Activated [${user.id}] [${user.email}].`))
+  );
+
+/**
+ * Activates a user, only works if user currently has the status: staged or deprovisioned.
+ * @param service - the service to use to activate the user.
+ * @param userId - the id of the user to activate.
+ * @param dryRun - if true, will not actually activate the user, but will print out what would happen.
+ * @returns a TaskEither that resolves to the activated user.
+ */
+export const activateUserHandler = (
+  service: UserService,
+  userId: string,
+  dryRun: boolean
+): TE.TaskEither<string, User> =>
+  pipe(
+    validateUserExist(service, userId),
+    TE.chain((user) => validateUserStatus(user)),
+    TE.chain((user) =>
+      dryRun
+        ? dryRunActivateUser(TE.right(user))
+        : activateUser(service, TE.right(user))
+    )
+  );
 
 export default (
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
@@ -135,7 +190,7 @@ export default (
       const client = oktaManageClient({ ...args });
       const service = new OktaUserService(client);
       const { userId, dryRun } = args;
-      const result = await activateUser(service, userId, dryRun)();
+      const result = await activateUserHandler(service, userId, dryRun)();
 
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {
