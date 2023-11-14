@@ -234,7 +234,7 @@ export class OktaUserService {
             }))
         ),
       (error: unknown) =>
-        `Failed to activate user [${userId}] because of [${JSON.stringify(
+        `Failed to expire user password [${userId}] because of [${JSON.stringify(
           error
         )}].`
     );
