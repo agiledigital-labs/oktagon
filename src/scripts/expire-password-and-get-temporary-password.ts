@@ -10,23 +10,28 @@ import * as okta from '@okta/okta-sdk-nodejs';
 import * as O from 'fp-ts/lib/Option';
 
 /**
- * Expires the password for a user and gets a temporary password for them, only works if user currently has the status: active, staged, provisioned, locked out, recovery, or password expired.
- * @param service - the service to use to expire the password and get a temporary password.
- * @param userId - the id of the user to expire the password and get a temporary password for.
- * @param dryRun - if true, will not expire the password of the user, but will print out what would happen.
- * @returns a TaskEither that resolves to the user and temporary password.
+ * User that can have their password expired.
  */
-export const expirePasswordAndGetTemporaryPassword = (
+type PasswordExpirableUser = User & {
+  readonly status:
+    | okta.UserStatus.ACTIVE
+    | okta.UserStatus.STAGED
+    | okta.UserStatus.PROVISIONED
+    | okta.UserStatus.LOCKED_OUT
+    | okta.UserStatus.RECOVERY
+    | okta.UserStatus.PASSWORD_EXPIRED;
+};
+
+/**
+ * Checks to see if user exists.
+ * @param service - the service to use to get the user.
+ * @param userId - the id of the user to get.
+ * @returns a TaskEither that resolves to the user if the user exists, otherwise an error message.
+ */
+const validateUserExist = (
   service: UserService,
-  userId: string,
-  dryRun: boolean
-): TE.TaskEither<
-  string,
-  {
-    readonly user: User;
-    readonly temporaryPassword: string;
-  }
-> =>
+  userId: string
+): TE.TaskEither<string, User> =>
   pipe(
     userId,
     service.getUser,
@@ -41,46 +46,103 @@ export const expirePasswordAndGetTemporaryPassword = (
           (user) => TE.right(user)
         )
       )
-    ),
-    TE.tapIO((user) =>
-      Console.info(
-        `Prior to password expiration, the user has status: [${user.status}].`
-      )
-    ),
-    TE.chain((user) => priorToPasswordExpirationUserStatusCheck(user)),
-    TE.chain((user) =>
-      dryRun
-        ? TE.right({
-            user: user,
-            temporaryPassword: '',
-          })
-        : service.expirePasswordAndGetTemporaryPassword(user.id)
-    ),
-    TE.tapIO(({ user, temporaryPassword }) =>
-      Console.info(
-        dryRun
-          ? `Will attempt to expire the password of the user [${user.id}] [${user.email}].`
-          : `Expired password for user [${user.id}] [${user.email}]. Temporary password is [${temporaryPassword}].`
-      )
     )
   );
 
-const priorToPasswordExpirationUserStatusCheck = (
+/**
+ * Checks to see if user has a status of active, staged, provisioned, locked out, recovery, or password expired.
+ * @param user - the user to check the status of.
+ * @returns - a TaskEither that resolves to the user if the user has a status of active, staged, provisioned, locked out, recovery, or password expired, otherwise an error message.
+ */
+const validateUserStatusPriorToPasswordExpiration = (
   user: User
-): TE.TaskEither<string, User> => {
+): TE.TaskEither<string, PasswordExpirableUser> => {
+  const userStatus = user.status;
+
   // eslint-disable-next-line sonarjs/no-small-switch, functional/no-conditional-statement
-  switch (user.status) {
+  switch (userStatus) {
     case okta.UserStatus.SUSPENDED:
     case okta.UserStatus.DEPROVISIONED: {
       return TE.left(
-        `Expiring a password is reserved for users with status: ${okta.UserStatus.ACTIVE}, ${okta.UserStatus.STAGED}, ${okta.UserStatus.PROVISIONED}, ${okta.UserStatus.LOCKED_OUT}, ${okta.UserStatus.RECOVERY}, or ${okta.UserStatus.PASSWORD_EXPIRED}.`
+        `User [${user.id}] [${user.email}] has status [${userStatus}]. Expiring a password is reserved for users with status: ${okta.UserStatus.ACTIVE}, ${okta.UserStatus.STAGED}, ${okta.UserStatus.PROVISIONED}, ${okta.UserStatus.LOCKED_OUT}, ${okta.UserStatus.RECOVERY}, or ${okta.UserStatus.PASSWORD_EXPIRED}.`
       );
     }
     default: {
-      return TE.right(user);
+      return TE.right({
+        ...user,
+        status: userStatus,
+      });
     }
   }
 };
+
+/**
+ * Prints out what would happen if we were to expire the password of the user.
+ * @param user - the user to dry run the password expiration for.
+ * @returns a TaskEither that resolves to the user and temporary password.
+ */
+const dryRunExpirePasswordAndGetTemporaryPassword = (
+  user: PasswordExpirableUser
+): TE.TaskEither<
+  string,
+  { readonly user: User; readonly temporaryPassword: string }
+> => {
+  // eslint-disable-next-line functional/no-expression-statement
+  console.info(
+    `User current status is [${user.status}]. Will attempt to expire password of user [${user.id}] [${user.email}].`
+  );
+  return TE.right({ user: user, temporaryPassword: '' });
+};
+
+/**
+ * Expires the password for a user and gets a temporary password for them.
+ * @param service - the service to use to expire the password and get a temporary password.
+ * @param user - the user to expire the password and get a temporary password for.
+ * @returns a TaskEither that resolves to the user and temporary password.
+ */
+const expirePasswordAndGetTemporaryPassword = (
+  service: UserService,
+  user: PasswordExpirableUser
+): TE.TaskEither<
+  string,
+  { readonly user: User; readonly temporaryPassword: string }
+> => {
+  // eslint-disable-next-line functional/no-expression-statement
+  console.info(`User current status is [${user.status}].`);
+  return pipe(
+    service.expirePasswordAndGetTemporaryPassword(user.id),
+    TE.tapIO(({ user, temporaryPassword }) =>
+      Console.info(
+        `Expired password for user [${user.id}] [${user.email}]. Temporary password is [${temporaryPassword}].`
+      )
+    )
+  );
+};
+
+/**
+ * Expires the password for a user and gets a temporary password for them, only works if user currently has the status: active, staged, provisioned, locked out, recovery, or password expired.
+ * @param service - the service to use to expire the password and get a temporary password.
+ * @param userId - the id of the user to expire the password and get a temporary password for.
+ * @param dryRun - if true, will not expire the password of the user, but will print out what would happen.
+ * @returns a TaskEither that resolves to the user and temporary password.
+ */
+export const expirePasswordAndGetTemporaryPasswordHandler = (
+  service: UserService,
+  userId: string,
+  dryRun: boolean
+): TE.TaskEither<
+  string,
+  { readonly user: User; readonly temporaryPassword: string }
+> =>
+  pipe(
+    validateUserExist(service, userId),
+    TE.chain((user) => validateUserStatusPriorToPasswordExpiration(user)),
+    TE.chain((user) =>
+      dryRun
+        ? dryRunExpirePasswordAndGetTemporaryPassword(user)
+        : expirePasswordAndGetTemporaryPassword(service, user)
+    )
+  );
 
 export default (
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
@@ -122,7 +184,7 @@ export default (
       const client = oktaManageClient({ ...args });
       const service = new OktaUserService(client);
       const { userId, dryRun } = args;
-      const result = await expirePasswordAndGetTemporaryPassword(
+      const result = await expirePasswordAndGetTemporaryPasswordHandler(
         service,
         userId,
         dryRun

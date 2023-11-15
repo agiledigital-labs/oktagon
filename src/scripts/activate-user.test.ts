@@ -11,7 +11,7 @@ import {
   baseUserService,
   deactivatedUser,
 } from './__fixtures__/data-providers';
-import { activateUser } from './activate-user';
+import { activateUserHandler } from './activate-user';
 
 describe('Activating users', () => {
   it.each([okta.UserStatus.DEPROVISIONED, okta.UserStatus.STAGED])(
@@ -29,7 +29,7 @@ describe('Activating users', () => {
       };
 
       // When we attempt to activate a user with status that isn't DEPROVISIONED or STAGED
-      const result = await activateUser(userService, user.id, false)();
+      const result = await activateUserHandler(userService, user.id, false)();
 
       // Then we should have a left
       expect(result).toEqualRight(user);
@@ -46,7 +46,11 @@ describe('Activating users', () => {
     };
 
     // When we attempt to activate the user in dry run mode
-    const result = await activateUser(userService, deactivatedUser.id, true)();
+    const result = await activateUserHandler(
+      userService,
+      deactivatedUser.id,
+      true
+    )();
 
     // Then the activateUser function should not have been called
     expect(result).toEqualRight(deactivatedUser);
@@ -62,7 +66,11 @@ describe('Activating users', () => {
     };
 
     // When we attempt to activate the user and the request fails
-    const result = await activateUser(userService, deactivatedUser.id, false)();
+    const result = await activateUserHandler(
+      userService,
+      deactivatedUser.id,
+      false
+    )();
 
     // Then we should have a left
     expect(result).toEqualLeft('expected error');
@@ -78,7 +86,11 @@ describe('Activating users', () => {
     };
 
     // When we attempt to activate a non-existent user
-    const result = await activateUser(userService, deactivatedUser.id, false)();
+    const result = await activateUserHandler(
+      userService,
+      deactivatedUser.id,
+      false
+    )();
 
     // Then we should have a left
     expect(result).toEqualLeft(
@@ -90,27 +102,27 @@ describe('Activating users', () => {
   it.each([
     [
       okta.UserStatus.ACTIVE,
-      `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. User [user_id] is already ${okta.UserStatus.ACTIVE}.`,
+      `User [user_id] [test@localhost] has status [${okta.UserStatus.ACTIVE}]. Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}.`,
     ],
     [
       okta.UserStatus.PROVISIONED,
-      `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please follow through with the activation workflow.`,
+      `User [user_id] [test@localhost] has status [${okta.UserStatus.PROVISIONED}]. Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please follow through with the activation workflow.`,
     ],
     [
       okta.UserStatus.LOCKED_OUT,
-      `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please use the unlock command.`,
+      `User [user_id] [test@localhost] has status [${okta.UserStatus.LOCKED_OUT}]. Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please use the unlock command.`,
     ],
     [
       okta.UserStatus.PASSWORD_EXPIRED,
-      `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please instruct user to login with temporary password and follow the password reset process.`,
+      `User [user_id] [test@localhost] has status [${okta.UserStatus.PASSWORD_EXPIRED}]. Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please instruct user to login with temporary password and follow the password reset process.`,
     ],
     [
       okta.UserStatus.RECOVERY,
-      `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please follow through with the activation workflow or restart the workflow using the reactivate-user command.`,
+      `User [user_id] [test@localhost] has status [${okta.UserStatus.RECOVERY}]. Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please follow through with the activation workflow or restart the workflow using the reactivate-user command.`,
     ],
     [
       okta.UserStatus.SUSPENDED,
-      `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please use the unsuspend-user command.`,
+      `User [user_id] [test@localhost] has status [${okta.UserStatus.SUSPENDED}]. Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please use the unsuspend-user command.`,
     ],
   ])(
     'fails when attempting to activate a user with status %s',
@@ -127,7 +139,7 @@ describe('Activating users', () => {
       };
 
       // When we attempt to activate a user with status that isn't DEPROVISIONED or STAGED
-      const result = await activateUser(userService, user.id, false)();
+      const result = await activateUserHandler(userService, user.id, false)();
 
       // Then we should have a left
       expect(result).toEqualLeft(errorMessage);
@@ -144,7 +156,11 @@ describe('Activating users', () => {
     };
 
     // When we attempt to activate a user but retrieving the user fails
-    const result = await activateUser(userService, deactivatedUser.id, false)();
+    const result = await activateUserHandler(
+      userService,
+      deactivatedUser.id,
+      false
+    )();
 
     // Then we should have a left
     expect(result).toEqualLeft('expected error');

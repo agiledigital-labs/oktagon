@@ -17,7 +17,7 @@ type ActivatableUser = User & {
 };
 
 /**
- * Checks to see if user exists
+ * Checks to see if user exists.
  * @param service - the service to use to get the user.
  * @param userId - the id of the user to get.
  * @returns a TaskEither that resolves to the user if the user exists, otherwise an error message.
@@ -37,96 +37,94 @@ const validateUserExist = (
           (user) => TE.right(user)
         )
       )
-    ),
-    TE.tapIO((user) =>
-      Console.info(
-        `Prior to activation, the user has status: [${user.status}].`
-      )
     )
   );
 
 /**
- * Checks to see if user has a status of staged or deprovisioned
+ * Checks to see if user has a status of staged or deprovisioned.
  * @param user - the user to check the status of.
  * @returns - a TaskEither that resolves to the user if the user has a status of staged or deprovisioned, otherwise an error message.
  */
-const validateUserStatus = (
+const validateUserStatusPriorToActivation = (
   user: User
 ): TE.TaskEither<string, ActivatableUser> => {
+  const userStatus = user.status;
   const activeStatus = okta.UserStatus.ACTIVE;
+  const context = `User [${user.id}] [${user.email}] has status [${userStatus}]. Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}.`;
+
   // eslint-disable-next-line sonarjs/no-small-switch, functional/no-conditional-statement
-  switch (user.status) {
+  switch (userStatus) {
     case okta.UserStatus.ACTIVE: {
-      return TE.left(
-        `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. User [${user.id}] is already ${okta.UserStatus.ACTIVE}.`
-      );
+      return TE.left(context);
     }
     case okta.UserStatus.PROVISIONED: {
       return TE.left(
-        `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ${activeStatus} status, please follow through with the activation workflow.`
+        `${context} To transition user to ${activeStatus} status, please follow through with the activation workflow.`
       );
     }
 
     case okta.UserStatus.LOCKED_OUT: {
       return TE.left(
-        `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ${activeStatus} status, please use the unlock command.`
+        `${context} To transition user to ${activeStatus} status, please use the unlock command.`
       );
     }
     case okta.UserStatus.PASSWORD_EXPIRED: {
       return TE.left(
-        `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ${activeStatus} status, please instruct user to login with temporary password and follow the password reset process.`
+        `${context} To transition user to ${activeStatus} status, please instruct user to login with temporary password and follow the password reset process.`
       );
     }
     case okta.UserStatus.RECOVERY: {
       return TE.left(
-        `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ${activeStatus} status, please follow through with the activation workflow or restart the workflow using the reactivate-user command.`
+        `${context} To transition user to ${activeStatus} status, please follow through with the activation workflow or restart the workflow using the reactivate-user command.`
       );
     }
     case okta.UserStatus.SUSPENDED: {
       return TE.left(
-        `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ${activeStatus} status, please use the unsuspend-user command.`
+        `${context} To transition user to ${activeStatus} status, please use the unsuspend-user command.`
       );
     }
     // STAGED or DEPROVISIONED user status
     default: {
       return TE.right({
         ...user,
-        status: user.status,
+        status: userStatus,
       });
     }
   }
 };
 
 /**
- * Prints out what would happen if the user was activated.
- * @param eitherUser - either the user or an error message.
+ * Prints out what would happen if we were to activate the user.
+ * @param user - the user to dry run the activation for.
  * @returns a TaskEither that resolves to the user.
  */
 const dryRunActivateUser = (
-  eitherUser: TE.TaskEither<string, ActivatableUser>
-): TE.TaskEither<string, User> =>
-  pipe(
-    eitherUser,
-    TE.tapIO((user) =>
-      Console.info(`Will attempt to activate [${user.id}] [${user.email}].`)
-    )
+  user: ActivatableUser
+): TE.TaskEither<string, User> => {
+  // eslint-disable-next-line functional/no-expression-statement
+  console.info(
+    `User current status is [${user.status}]. Will attempt to activate [${user.id}] [${user.email}].`
   );
+  return TE.right(user);
+};
 
 /**
  * Activates the user.
  * @param service - the service to use to activate the user.
- * @param eitherUser - either the user or an error message.
+ * @param user - the user to activate.
  * @returns a TaskEither that resolves to the activated user.
  */
 const activateUser = (
   service: UserService,
-  eitherUser: TE.TaskEither<string, ActivatableUser>
-): TE.TaskEither<string, User> =>
-  pipe(
-    eitherUser,
-    TE.chain((user) => service.activateUser(user.id)),
+  user: ActivatableUser
+): TE.TaskEither<string, User> => {
+  // eslint-disable-next-line functional/no-expression-statement
+  console.info(`User current status is [${user.status}].`);
+  return pipe(
+    service.activateUser(user.id),
     TE.tapIO((user) => Console.info(`Activated [${user.id}] [${user.email}].`))
   );
+};
 
 /**
  * Activates a user, only works if user currently has the status: staged or deprovisioned.
@@ -142,11 +140,9 @@ export const activateUserHandler = (
 ): TE.TaskEither<string, User> =>
   pipe(
     validateUserExist(service, userId),
-    TE.chain((user) => validateUserStatus(user)),
+    TE.chain((user) => validateUserStatusPriorToActivation(user)),
     TE.chain((user) =>
-      dryRun
-        ? dryRunActivateUser(TE.right(user))
-        : activateUser(service, TE.right(user))
+      dryRun ? dryRunActivateUser(user) : activateUser(service, user)
     )
   );
 

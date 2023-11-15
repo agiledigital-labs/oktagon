@@ -8,7 +8,7 @@ import { User, UserService } from './services/user-service';
 import * as okta from '@okta/okta-sdk-nodejs';
 
 import { baseUserService, user } from './__fixtures__/data-providers';
-import { expirePasswordAndGetTemporaryPassword } from './expire-password-and-get-temporary-password';
+import { expirePasswordAndGetTemporaryPasswordHandler } from './expire-password-and-get-temporary-password';
 
 describe('Expiring the password for a user and getting a temporary password for a user', () => {
   it.each([
@@ -38,7 +38,7 @@ describe('Expiring the password for a user and getting a temporary password for 
       };
 
       // When we attempt to expire the password for a user that is active, staged, provisioned, locked out, recovery, or password
-      const result = await expirePasswordAndGetTemporaryPassword(
+      const result = await expirePasswordAndGetTemporaryPasswordHandler(
         userService,
         user.id,
         false
@@ -69,7 +69,7 @@ describe('Expiring the password for a user and getting a temporary password for 
     };
 
     // When we attempt to expire the password for a user and get a temporary password in dry run mode
-    const result = await expirePasswordAndGetTemporaryPassword(
+    const result = await expirePasswordAndGetTemporaryPasswordHandler(
       userService,
       user.id,
       true
@@ -96,7 +96,7 @@ describe('Expiring the password for a user and getting a temporary password for 
     };
 
     // When we attempt to expire the password for a user and get a temporary password and the request fails
-    const result = await expirePasswordAndGetTemporaryPassword(
+    const result = await expirePasswordAndGetTemporaryPasswordHandler(
       userService,
       user.id,
       false
@@ -109,9 +109,18 @@ describe('Expiring the password for a user and getting a temporary password for 
     ).toHaveBeenCalled();
   });
 
-  it.each([okta.UserStatus.SUSPENDED, okta.UserStatus.DEPROVISIONED])(
+  it.each([
+    [
+      okta.UserStatus.SUSPENDED,
+      `User [user_id] [test@localhost] has status [${okta.UserStatus.SUSPENDED}]. Expiring a password is reserved for users with status: ACTIVE, STAGED, PROVISIONED, LOCKED_OUT, RECOVERY, or PASSWORD_EXPIRED.`,
+    ],
+    [
+      okta.UserStatus.DEPROVISIONED,
+      `User [user_id] [test@localhost] has status [${okta.UserStatus.DEPROVISIONED}]. Expiring a password is reserved for users with status: ACTIVE, STAGED, PROVISIONED, LOCKED_OUT, RECOVERY, or PASSWORD_EXPIRED.`,
+    ],
+  ])(
     'fails when attempting to expire password of a user with status %s',
-    async (status) => {
+    async (status, errorMessage) => {
       // Given a user with status status
       const userService: UserService = {
         ...baseUserService(),
@@ -122,16 +131,14 @@ describe('Expiring the password for a user and getting a temporary password for 
       };
 
       // When we attempt to expire the password for a user that is not active, staged, provisioned, locked out, recovery, or password expired
-      const result = await expirePasswordAndGetTemporaryPassword(
+      const result = await expirePasswordAndGetTemporaryPasswordHandler(
         userService,
         user.id,
         false
       )();
 
       // Then we should have a left
-      expect(result).toEqualLeft(
-        `Expiring a password is reserved for users with status: ${okta.UserStatus.ACTIVE}, ${okta.UserStatus.STAGED}, ${okta.UserStatus.PROVISIONED}, ${okta.UserStatus.LOCKED_OUT}, ${okta.UserStatus.RECOVERY}, or ${okta.UserStatus.PASSWORD_EXPIRED}.`
-      );
+      expect(result).toEqualLeft(errorMessage);
       expect(
         userService.expirePasswordAndGetTemporaryPassword
       ).not.toHaveBeenCalled();
@@ -149,7 +156,7 @@ describe('Expiring the password for a user and getting a temporary password for 
     };
 
     // When we attempt to expire the password for a non-existent user and get a temporary password
-    const result = await expirePasswordAndGetTemporaryPassword(
+    const result = await expirePasswordAndGetTemporaryPasswordHandler(
       userService,
       user.id,
       false
@@ -175,7 +182,7 @@ describe('Expiring the password for a user and getting a temporary password for 
     };
 
     // When we attempt to expire the password for a user and get a temporary password but retrieving the user fails
-    const result = await expirePasswordAndGetTemporaryPassword(
+    const result = await expirePasswordAndGetTemporaryPasswordHandler(
       userService,
       user.id,
       false
