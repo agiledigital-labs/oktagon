@@ -129,7 +129,6 @@ export class OktaUserService {
       this.privateListUsers
     );
 
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   readonly privateListUsers = (
     groupOrClient: TE.TaskEither<string, okta.Group | okta.Client>
   ) =>
@@ -227,7 +226,6 @@ export class OktaUserService {
         this.client.getUser(userId).then((user) =>
           user
             .expirePasswordAndGetTemporaryPassword()
-            // eslint-disable-next-line functional/functional-parameters
             .then((oktaTempPassword) => ({
               user: oktaUserAsUser(user),
               temporaryPassword: oktaTempPassword.tempPassword,

@@ -43,7 +43,6 @@ const usersTable = (users: readonly User[]): string => {
 
 export const users = (service: UserService) =>
   pipe(
-    // eslint-disable-next-line functional/functional-parameters
     service.listUsers(),
     TE.map((users) => usersTable(users)),
     TE.chainFirstIOK(Console.info)
@@ -63,7 +62,6 @@ export const usersInGroup = (
         (group: Group) => TE.right(group)
       )
     ),
-    // eslint-disable-next-line functional/functional-parameters
     TE.chain(userService.listUsersInGroup),
     TE.map((users) => usersTable(users)),
     TE.chainFirstIOK(Console.info)

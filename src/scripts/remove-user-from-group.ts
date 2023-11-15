@@ -56,7 +56,6 @@ const removeUserFromGroup = (
         )
       )
     ),
-    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
     TE.chainFirstIOK((response) => Console.info(response))
   );
 export default (

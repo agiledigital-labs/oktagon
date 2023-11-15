@@ -5,9 +5,8 @@ import * as okta from '@okta/okta-sdk-nodejs';
 import { oktaManageClient } from './services/client-service';
 import * as TE from 'fp-ts/lib/TaskEither';
 import * as E from 'fp-ts/lib/Either';
-import { flow, pipe } from 'fp-ts/lib/function';
+import { pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
-import * as O from 'fp-ts/lib/Option';
 
 /**
  * User that can be activated.
@@ -30,16 +29,10 @@ const validateUserExist = (
     userId,
     service.getUser,
     TE.chain(
-      flow(
-        O.fold(
-          () => TE.left(`User [${userId}] does not exist. Can not activate.`),
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          (user) => TE.right(user)
-        )
-      )
+      // eslint-disable-next-line functional/functional-parameters
+      TE.fromOption(() => `User [${userId}] does not exist. Can not activate.`)
     )
   );
-
 /**
  * Checks to see if user has a status of staged or deprovisioned.
  * @param user - the user to check the status of.
@@ -52,7 +45,7 @@ const validateUserStatusPriorToActivation = (
   const activeStatus = okta.UserStatus.ACTIVE;
   const context = `User [${user.id}] [${user.email}] has status [${userStatus}]. Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}.`;
 
-  // eslint-disable-next-line sonarjs/no-small-switch, functional/no-conditional-statement
+  // eslint-disable-next-line functional/no-conditional-statement
   switch (userStatus) {
     case okta.UserStatus.ACTIVE: {
       return TE.left(context);
@@ -100,13 +93,15 @@ const validateUserStatusPriorToActivation = (
  */
 const dryRunActivateUser = (
   user: ActivatableUser
-): TE.TaskEither<string, User> => {
-  // eslint-disable-next-line functional/no-expression-statement
-  console.info(
-    `User current status is [${user.status}]. Will attempt to activate [${user.id}] [${user.email}].`
+): TE.TaskEither<string, User> =>
+  pipe(
+    Console.info(
+      `Will attempt to activate [${user.id}] [${user.email}] with status [${user.status}].`
+    ),
+    TE.rightIO,
+    // eslint-disable-next-line functional/functional-parameters
+    TE.chain(() => TE.right(user))
   );
-  return TE.right(user);
-};
 
 /**
  * Activates the user.
@@ -117,14 +112,21 @@ const dryRunActivateUser = (
 const activateUser = (
   service: UserService,
   user: ActivatableUser
-): TE.TaskEither<string, User> => {
-  // eslint-disable-next-line functional/no-expression-statement
-  console.info(`User current status is [${user.status}].`);
-  return pipe(
-    service.activateUser(user.id),
-    TE.tapIO((user) => Console.info(`Activated [${user.id}] [${user.email}].`))
+): TE.TaskEither<string, User> =>
+  pipe(
+    Console.info(
+      `Activating user [${user.id}] [${user.email}] with status [${user.status}]...`
+    ),
+    TE.rightIO,
+    // eslint-disable-next-line functional/functional-parameters
+    TE.chain(() => service.activateUser(user.id)),
+    TE.chain((user) => validateUserExist(service, user.id)),
+    TE.tapIO((user) =>
+      Console.info(
+        `Activated [${user.id}] [${user.email}], new status is [${user.status}].`
+      )
+    )
   );
-};
 
 /**
  * Activates a user, only works if user currently has the status: staged or deprovisioned.

@@ -4,10 +4,9 @@ import { OktaUserService, User, UserService } from './services/user-service';
 import { oktaManageClient } from './services/client-service';
 import * as TE from 'fp-ts/lib/TaskEither';
 import * as E from 'fp-ts/lib/Either';
-import { flow, pipe } from 'fp-ts/lib/function';
+import { pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
 import * as okta from '@okta/okta-sdk-nodejs';
-import * as O from 'fp-ts/lib/Option';
 
 /**
  * User that can have their password expired.
@@ -36,15 +35,9 @@ const validateUserExist = (
     userId,
     service.getUser,
     TE.chain(
-      flow(
-        O.fold(
-          () =>
-            TE.left(
-              `User [${userId}] does not exist. Can not expire password.`
-            ),
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          (user) => TE.right(user)
-        )
+      TE.fromOption(
+        // eslint-disable-next-line functional/functional-parameters
+        () => `User [${userId}] does not exist. Can not expire password.`
       )
     )
   );
@@ -59,7 +52,7 @@ const validateUserStatusPriorToPasswordExpiration = (
 ): TE.TaskEither<string, PasswordExpirableUser> => {
   const userStatus = user.status;
 
-  // eslint-disable-next-line sonarjs/no-small-switch, functional/no-conditional-statement
+  // eslint-disable-next-line functional/no-conditional-statement
   switch (userStatus) {
     case okta.UserStatus.SUSPENDED:
     case okta.UserStatus.DEPROVISIONED: {
@@ -86,13 +79,15 @@ const dryRunExpirePasswordAndGetTemporaryPassword = (
 ): TE.TaskEither<
   string,
   { readonly user: User; readonly temporaryPassword: string }
-> => {
-  // eslint-disable-next-line functional/no-expression-statement
-  console.info(
-    `User current status is [${user.status}]. Will attempt to expire password of user [${user.id}] [${user.email}].`
+> =>
+  pipe(
+    Console.info(
+      `Will attempt to expire password of user [${user.id}] [${user.email}] with status [${user.status}].`
+    ),
+    TE.rightIO,
+    // eslint-disable-next-line functional/functional-parameters
+    TE.chain(() => TE.right({ user: user, temporaryPassword: '' }))
   );
-  return TE.right({ user: user, temporaryPassword: '' });
-};
 
 /**
  * Expires the password for a user and gets a temporary password for them.
@@ -106,18 +101,20 @@ const expirePasswordAndGetTemporaryPassword = (
 ): TE.TaskEither<
   string,
   { readonly user: User; readonly temporaryPassword: string }
-> => {
-  // eslint-disable-next-line functional/no-expression-statement
-  console.info(`User current status is [${user.status}].`);
-  return pipe(
-    service.expirePasswordAndGetTemporaryPassword(user.id),
+> =>
+  pipe(
+    Console.info(
+      `Expiring password of user [${user.id}] [${user.email}] with status [${user.status}]...`
+    ),
+    TE.rightIO,
+    // eslint-disable-next-line functional/functional-parameters
+    TE.chain(() => service.expirePasswordAndGetTemporaryPassword(user.id)),
     TE.tapIO(({ user, temporaryPassword }) =>
       Console.info(
         `Expired password for user [${user.id}] [${user.email}]. Temporary password is [${temporaryPassword}].`
       )
     )
   );
-};
 
 /**
  * Expires the password for a user and gets a temporary password for them, only works if user currently has the status: active, staged, provisioned, locked out, recovery, or password expired.

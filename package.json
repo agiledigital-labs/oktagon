@@ -8,7 +8,7 @@
   "license": "MIT",
   "scripts": {
     "build": "NODE_ENV=production rollup -c --environment BUILD:production",
-    "lint": "eslint src --ext .ts,.tsx",
+    "lint": "eslint src --ext .ts,.tsx --report-unused-disable-directives --resolve-plugins-relative-to .",
     "start": "NODE_ENV=development rollup -c",
     "watch": "npm run start -- -w",
     "type-coverage": "type-coverage",
