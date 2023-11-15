@@ -26,8 +26,10 @@ const validateUserExist = (
   userId: string
 ): TE.TaskEither<string, User> =>
   pipe(
-    userId,
-    service.getUser,
+    Console.info(`Fetching user with ID [${userId}]...`),
+    TE.rightIO,
+    // eslint-disable-next-line functional/functional-parameters
+    TE.chain(() => service.getUser(userId)),
     TE.chain(
       // eslint-disable-next-line functional/functional-parameters
       TE.fromOption(() => `User [${userId}] does not exist. Can not activate.`)
@@ -120,10 +122,11 @@ const activateUser = (
     TE.rightIO,
     // eslint-disable-next-line functional/functional-parameters
     TE.chain(() => service.activateUser(user.id)),
+    TE.tapIO((user) => Console.info(`Activated [${user.id}] [${user.email}].`)),
     TE.chain((user) => validateUserExist(service, user.id)),
     TE.tapIO((user) =>
       Console.info(
-        `Activated [${user.id}] [${user.email}], new status is [${user.status}].`
+        `User [${user.id}] [${user.email}] has new status [${user.status}].`
       )
     )
   );

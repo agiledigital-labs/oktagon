@@ -32,8 +32,10 @@ const validateUserExist = (
   userId: string
 ): TE.TaskEither<string, User> =>
   pipe(
-    userId,
-    service.getUser,
+    Console.info(`Fetching user with ID [${userId}]...`),
+    TE.rightIO,
+    // eslint-disable-next-line functional/functional-parameters
+    TE.chain(() => service.getUser(userId)),
     TE.chain(
       TE.fromOption(
         // eslint-disable-next-line functional/functional-parameters
