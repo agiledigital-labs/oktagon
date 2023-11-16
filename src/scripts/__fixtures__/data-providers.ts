@@ -1,5 +1,3 @@
-/* eslint-disable functional/no-return-void */
-/* eslint-disable functional/no-expression-statement */
 /* eslint-disable functional/functional-parameters */
 import * as TE from 'fp-ts/TaskEither';
 import { User, UserService } from '../services/user-service';
@@ -36,6 +34,8 @@ export const baseUserService = (): UserService => ({
   deactivateUser: returnLeftTE,
   listUsers: returnLeftTE,
   listUsersInGroup: returnLeftTE,
+  activateUser: returnLeftTE,
+  expirePasswordAndGetTemporaryPassword: returnLeftTE,
 });
 
 export const baseGroupService = (): GroupService => ({

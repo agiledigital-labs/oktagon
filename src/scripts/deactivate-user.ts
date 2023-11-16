@@ -21,9 +21,8 @@ const deactivateUser = (
         O.fold(
           () =>
             TE.left(`User [${userId}] does not exist. Can not de-activate.`),
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
           (user) =>
-            user.deactivated ? TE.right(user) : service.deleteUser(userId)
+            user.deactivated ? TE.right(user) : service.deactivateUser(userId)
         )
       )
     ),

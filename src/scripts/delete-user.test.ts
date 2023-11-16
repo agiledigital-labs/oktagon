@@ -33,7 +33,7 @@ describe('Deleting users without using force', () => {
   });
 
   it('fails when attempting to delete a non-deprovisioned user', async () => {
-    // Given a deleteUser function that can succsessfully delete a given user (which theoretically cannot happen if not deprovisioned)
+    // Given a deleteUser function that can succsessfully delete a given user (which theoretically can not happen if not deprovisioned)
     const userService: UserService = {
       ...baseUserService(),
       deleteUser: jest.fn(() => TE.right(user)),
@@ -93,7 +93,7 @@ describe('Deleting a user with force', () => {
   });
 
   it('fails when attempting to deprovision a user fails', async () => {
-    // Given the deactivateUser function that cannot deactivate a user, but deleteUser and getUser works fine
+    // Given the deactivateUser function that can not deactivate a user, but deleteUser and getUser works fine
     const userService: UserService = {
       ...baseUserService(),
       deleteUser: jest.fn(() => TE.right(user)),

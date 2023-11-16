@@ -27,9 +27,7 @@ export const deleteUser = (
     TE.chain(
       flow(
         O.fold(
-          // eslint-disable-next-line functional/functional-parameters
           () => TE.left(`User [${userId}] does not exist. Can not delete.`),
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
           (user) =>
             user.deactivated
               ? service.deleteUser(userId)

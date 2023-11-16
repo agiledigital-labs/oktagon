@@ -129,7 +129,6 @@ export class OktaUserService {
       this.privateListUsers
     );
 
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   readonly privateListUsers = (
     groupOrClient: TE.TaskEither<string, okta.Group | okta.Client>
   ) =>
@@ -196,6 +195,47 @@ export class OktaUserService {
           error
         )}].`
     );
+
+  readonly activateUser = (userId: string): TE.TaskEither<string, User> =>
+    TE.tryCatch(
+      () =>
+        // eslint-disable-next-line functional/no-this-expression, @typescript-eslint/prefer-readonly-parameter-types
+        this.client.getUser(userId).then((user) =>
+          user
+            .activate({
+              sendEmail: false,
+            })
+            // eslint-disable-next-line functional/functional-parameters
+            .then(() => oktaUserAsUser(user))
+        ),
+      (error: unknown) =>
+        `Failed to activate user [${userId}] because of [${JSON.stringify(
+          error
+        )}].`
+    );
+
+  readonly expirePasswordAndGetTemporaryPassword = (
+    userId: string
+  ): TE.TaskEither<
+    string,
+    { readonly user: User; readonly temporaryPassword: string }
+  > =>
+    TE.tryCatch(
+      () =>
+        // eslint-disable-next-line functional/no-this-expression, @typescript-eslint/prefer-readonly-parameter-types
+        this.client.getUser(userId).then((user) =>
+          user
+            .expirePasswordAndGetTemporaryPassword()
+            .then((oktaTempPassword) => ({
+              user: oktaUserAsUser(user),
+              temporaryPassword: oktaTempPassword.tempPassword,
+            }))
+        ),
+      (error: unknown) =>
+        `Failed to expire user password [${userId}] because of [${JSON.stringify(
+          error
+        )}].`
+    );
 }
 
 export type UserService = {
@@ -205,4 +245,6 @@ export type UserService = {
   readonly getUser: OktaUserService['getUser'];
   readonly deleteUser: OktaUserService['deleteUser'];
   readonly deactivateUser: OktaUserService['deactivateUser'];
+  readonly activateUser: OktaUserService['activateUser'];
+  readonly expirePasswordAndGetTemporaryPassword: OktaUserService['expirePasswordAndGetTemporaryPassword'];
 };

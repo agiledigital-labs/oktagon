@@ -25,7 +25,6 @@ const createUser = (
       flow(
         O.fold(
           () => service.createUser(email, firstName, lastName, password),
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
           (user) =>
             TE.left(
               `User [${email}] already exists with id [${user.id}]. Can not create a new user.`
@@ -87,7 +86,6 @@ export default (
       readonly email: string;
       readonly firstName: string;
       readonly lastName: string;
-      // eslint-disable-next-line @typescript-eslint/require-await
     }) => {
       const password = String(
         generate({

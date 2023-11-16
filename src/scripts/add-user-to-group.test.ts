@@ -65,7 +65,7 @@ describe('Adding a user to a group', () => {
 
     // Then the request should have failed because the user does not exist
     expect(result).toEqualLeft(
-      'User [userId] does not exist. Cannot add user to group.'
+      'User [userId] does not exist. Can not add user to group.'
     );
 
     // And no attempt was made to add the user to the group.
@@ -123,7 +123,7 @@ describe('Adding a user to a group', () => {
 
     // Then the request should have failed because the group does not exist
     expect(result).toEqualLeft(
-      'Group [groupId] does not exist. Cannot add user to group.'
+      'Group [groupId] does not exist. Can not add user to group.'
     );
 
     // And no attempt was made to add the user to the group.
@@ -181,7 +181,7 @@ describe('Adding a user to a group', () => {
 
     // Then the request should have failed because the group does not exist
     expect(result).toEqualLeft(
-      'Group [groupId] does not exist. User [userId] does not exist. Cannot add user to group.'
+      'Group [groupId] does not exist. User [userId] does not exist. Can not add user to group.'
     );
 
     // And no attempt was made to add the user to the group.

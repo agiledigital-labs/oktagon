@@ -36,7 +36,6 @@ const groupsTable = (groups: readonly Group[]): string => {
 
 const groups = (service: GroupService) =>
   pipe(
-    // eslint-disable-next-line functional/functional-parameters
     service.listGroups(),
     TE.map((groups) => groupsTable(groups)),
     TE.chainFirstIOK(Console.info)
