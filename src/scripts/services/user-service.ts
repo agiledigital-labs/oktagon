@@ -196,14 +196,17 @@ export class OktaUserService {
         )}].`
     );
 
-  readonly activateUser = (userId: string): TE.TaskEither<string, User> =>
+  readonly activateUser = (
+    userId: string,
+    sendEmail = false
+  ): TE.TaskEither<string, User> =>
     TE.tryCatch(
       () =>
         // eslint-disable-next-line functional/no-this-expression, @typescript-eslint/prefer-readonly-parameter-types
         this.client.getUser(userId).then((user) =>
           user
             .activate({
-              sendEmail: false,
+              sendEmail,
             })
             // eslint-disable-next-line functional/functional-parameters
             .then(() => oktaUserAsUser(user))
