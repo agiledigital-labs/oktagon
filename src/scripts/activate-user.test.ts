@@ -13,10 +13,8 @@ import {
 } from './__fixtures__/data-providers';
 import {
   activateUser,
-  activateUserAndSendEmail,
   activateUserHandler,
   dryRunActivateUser,
-  dryRunActivateUserAndSendEmail,
 } from './activate-user';
 
 describe('Activating users', () => {
@@ -38,7 +36,7 @@ describe('Activating users', () => {
       const activateUserResult = await activateUserHandler(
         userService,
         user.id,
-        activateUser(userService)
+        activateUser(userService, false)
       )();
 
       // Then we should have a left
@@ -48,7 +46,7 @@ describe('Activating users', () => {
       const activateUserAndSendEmailResult = await activateUserHandler(
         userService,
         user.id,
-        activateUserAndSendEmail(userService)
+        activateUser(userService, true)
       )();
 
       // Then we should have a left
@@ -70,7 +68,7 @@ describe('Activating users', () => {
     const activateUserResult = await activateUserHandler(
       userService,
       deactivatedUser.id,
-      dryRunActivateUser
+      dryRunActivateUser(false)
     )();
     // Then the activateUser function should not have been called
     expect(activateUserResult).toEqualRight(deactivatedUser);
@@ -79,7 +77,7 @@ describe('Activating users', () => {
     const activateUserAndSendEmailResult = await activateUserHandler(
       userService,
       deactivatedUser.id,
-      dryRunActivateUserAndSendEmail
+      dryRunActivateUser(true)
     )();
     // Then the activateUser function should not have been called
     expect(activateUserAndSendEmailResult).toEqualRight(deactivatedUser);
@@ -99,7 +97,7 @@ describe('Activating users', () => {
     const activateUserResult = await activateUserHandler(
       userService,
       deactivatedUser.id,
-      activateUser(userService)
+      activateUser(userService, false)
     )();
 
     // Then we should have a left
@@ -109,7 +107,7 @@ describe('Activating users', () => {
     const activateUserAndSendEmailResult = await activateUserHandler(
       userService,
       deactivatedUser.id,
-      activateUserAndSendEmail(userService)
+      activateUser(userService, true)
     )();
 
     // Then we should have a left
@@ -129,7 +127,7 @@ describe('Activating users', () => {
     const activateUserResult = await activateUserHandler(
       userService,
       deactivatedUser.id,
-      activateUser(userService)
+      activateUser(userService, false)
     )();
     // Then we should have a left
     expect(activateUserResult).toEqualLeft(
@@ -140,7 +138,7 @@ describe('Activating users', () => {
     const activateUserSendEmailResult = await activateUserHandler(
       userService,
       deactivatedUser.id,
-      activateUserAndSendEmail(userService)
+      activateUser(userService, true)
     )();
     // Then we should have a left
     expect(activateUserSendEmailResult).toEqualLeft(
@@ -193,7 +191,7 @@ describe('Activating users', () => {
       const activateUserResult = await activateUserHandler(
         userService,
         user.id,
-        activateUser(userService)
+        activateUser(userService, false)
       )();
 
       // Then we should have a left
@@ -203,7 +201,7 @@ describe('Activating users', () => {
       const activateUserSendEmailResult = await activateUserHandler(
         userService,
         user.id,
-        activateUserAndSendEmail(userService)
+        activateUser(userService, true)
       )();
 
       // Then we should have a left
@@ -224,7 +222,7 @@ describe('Activating users', () => {
     const activateUserResult = await activateUserHandler(
       userService,
       deactivatedUser.id,
-      activateUser(userService)
+      activateUser(userService, false)
     )();
     // Then we should have a left
     expect(activateUserResult).toEqualLeft('expected error');
@@ -233,7 +231,7 @@ describe('Activating users', () => {
     const activateUserAndSendEmailResult = await activateUserHandler(
       userService,
       deactivatedUser.id,
-      activateUserAndSendEmail(userService)
+      activateUser(userService, true)
     )();
     // Then we should have a left
     expect(activateUserAndSendEmailResult).toEqualLeft('expected error');

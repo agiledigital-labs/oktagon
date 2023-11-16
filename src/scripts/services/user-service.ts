@@ -196,6 +196,12 @@ export class OktaUserService {
         )}].`
     );
 
+  /**
+   *
+   * @param userId - the id of the user to activate
+   * @param sendEmail - whether to send an activation email to the user, defaults to false
+   * @returns the activated user
+   */
   readonly activateUser = (
     userId: string,
     sendEmail = false
