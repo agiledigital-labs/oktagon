@@ -199,12 +199,12 @@ export class OktaUserService {
   /**
    * Activates a user in Okta.
    * @param userId - the id of the user to activate
-   * @param sendEmail - whether to send an activation email to the user, defaults to false
+   * @param sendEmail - whether to send an activation email to the user
    * @returns the activated user
    */
   readonly activateUser = (
     userId: string,
-    sendEmail = false
+    sendEmail: boolean
   ): TE.TaskEither<string, User> =>
     TE.tryCatch(
       () =>
