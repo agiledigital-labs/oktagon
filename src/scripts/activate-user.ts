@@ -90,46 +90,57 @@ const validateUserStatusPriorToActivation = (
 
 /**
  * Prints out what would happen if we were to activate the user.
+ * @param sendEmail - if true, will print out that an activation email will be sent to the user.
  * @param user - the user to dry run the activation for.
  * @returns a TaskEither that resolves to the user.
  */
-const dryRunActivateUser = (
-  user: ActivatableUser
-): TE.TaskEither<string, User> =>
-  pipe(
-    Console.info(
-      `Will attempt to activate [${user.id}] [${user.email}] with status [${user.status}].`
-    ),
-    TE.rightIO,
-    // eslint-disable-next-line functional/functional-parameters
-    TE.chain(() => TE.right(user))
-  );
+export const dryRunActivateUser =
+  (sendEmail: boolean) =>
+  (user: ActivatableUser): TE.TaskEither<string, User> =>
+    pipe(
+      Console.info(
+        `Will attempt to activate [${user.id}] [${user.email}] with status [${
+          user.status
+        }]${sendEmail ? ' and send activation email' : ''}.`
+      ),
+      TE.rightIO,
+      // eslint-disable-next-line functional/functional-parameters
+      TE.chain(() => TE.right(user))
+    );
 
 /**
  * Activates the user.
  * @param service - the service to use to activate the user.
+ * @param sendEmail - if true, will send activation email to the user.
  * @param user - the user to activate.
  * @returns a TaskEither that resolves to the activated user.
  */
-const activateUser = (
-  service: UserService,
-  user: ActivatableUser
-): TE.TaskEither<string, User> =>
-  pipe(
-    Console.info(
-      `Activating user [${user.id}] [${user.email}] with status [${user.status}]...`
-    ),
-    TE.rightIO,
-    // eslint-disable-next-line functional/functional-parameters
-    TE.chain(() => service.activateUser(user.id)),
-    TE.tapIO((user) => Console.info(`Activated [${user.id}] [${user.email}].`)),
-    TE.chain((user) => validateUserExist(service, user.id)),
-    TE.tapIO((user) =>
+export const activateUser =
+  (service: UserService, sendEmail: boolean) =>
+  (user: ActivatableUser): TE.TaskEither<string, User> =>
+    pipe(
       Console.info(
-        `User [${user.id}] [${user.email}] has new status [${user.status}].`
+        `Activating user [${user.id}] [${user.email}] with status [${
+          user.status
+        }]${sendEmail ? ' and sending email' : ''}...`
+      ),
+      TE.rightIO,
+      // eslint-disable-next-line functional/functional-parameters
+      TE.chain(() => service.activateUser(user.id, sendEmail)),
+      TE.tapIO((user) =>
+        Console.info(
+          `Activated [${user.id}] [${user.email}].${
+            sendEmail ? ' Email has been sent to [${user.email}].' : ''
+          }}`
+        )
+      ),
+      TE.chain((user) => validateUserExist(service, user.id)),
+      TE.tapIO((user) =>
+        Console.info(
+          `User [${user.id}] [${user.email}] has new status [${user.status}].`
+        )
       )
-    )
-  );
+    );
 
 /**
  * Activates a user, only works if user currently has the status: staged or deprovisioned.
@@ -141,14 +152,12 @@ const activateUser = (
 export const activateUserHandler = (
   service: UserService,
   userId: string,
-  dryRun: boolean
+  commandHandler: (user: ActivatableUser) => TE.TaskEither<string, User>
 ): TE.TaskEither<string, User> =>
   pipe(
     validateUserExist(service, userId),
     TE.chain((user) => validateUserStatusPriorToActivation(user)),
-    TE.chain((user) =>
-      dryRun ? dryRunActivateUser(user) : activateUser(service, user)
-    )
+    TE.chain((user) => commandHandler(user))
   );
 
 export default (
@@ -160,6 +169,7 @@ export default (
   readonly organisationUrl: string;
   readonly userId: string;
   readonly dryRun: boolean;
+  readonly sendEmail: boolean;
 }> =>
   rootCommand.command(
     'activate-user [user-id]',
@@ -168,10 +178,18 @@ export default (
     (yargs) => {
       // eslint-disable-next-line functional/no-expression-statement
       yargs
-        .option('dry-run', {
+        .option('dryRun', {
+          alias: 'dry-run',
           type: 'boolean',
           describe:
             'if true, will not activate the user, but will print out the user status.',
+          demandOption: false,
+          default: false,
+        })
+        .option('sendEmail', {
+          alias: 'send-email',
+          type: 'boolean',
+          describe: 'if true, will send activation email to the user.',
           demandOption: false,
           default: false,
         })
@@ -187,11 +205,22 @@ export default (
       readonly organisationUrl: string;
       readonly userId: string;
       readonly dryRun: boolean;
+      readonly sendEmail: boolean;
     }) => {
       const client = oktaManageClient({ ...args });
       const service = new OktaUserService(client);
-      const { userId, dryRun } = args;
-      const result = await activateUserHandler(service, userId, dryRun)();
+      const { userId, dryRun, sendEmail } = args;
+      const commandHandler: (
+        user: ActivatableUser
+      ) => TE.TaskEither<string, User> = dryRun
+        ? dryRunActivateUser(sendEmail)
+        : activateUser(service, sendEmail);
+
+      const result = await activateUserHandler(
+        service,
+        userId,
+        commandHandler
+      )();
 
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {

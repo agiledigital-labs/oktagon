@@ -11,7 +11,11 @@ import {
   baseUserService,
   deactivatedUser,
 } from './__fixtures__/data-providers';
-import { activateUserHandler } from './activate-user';
+import {
+  activateUser,
+  activateUserHandler,
+  dryRunActivateUser,
+} from './activate-user';
 
 describe('Activating users', () => {
   it.each([okta.UserStatus.DEPROVISIONED, okta.UserStatus.STAGED])(
@@ -29,11 +33,26 @@ describe('Activating users', () => {
       };
 
       // When we attempt to activate a user with status that isn't DEPROVISIONED or STAGED
-      const result = await activateUserHandler(userService, user.id, false)();
+      const activateUserResult = await activateUserHandler(
+        userService,
+        user.id,
+        activateUser(userService, false)
+      )();
 
       // Then we should have a left
-      expect(result).toEqualRight(user);
-      expect(userService.activateUser).toHaveBeenCalled();
+      expect(activateUserResult).toEqualRight(user);
+
+      // When we attempt to activate a user with status that isn't DEPROVISIONED or STAGED and send activation email
+      const activateUserAndSendEmailResult = await activateUserHandler(
+        userService,
+        user.id,
+        activateUser(userService, true)
+      )();
+
+      // Then we should have a left
+      expect(activateUserAndSendEmailResult).toEqualRight(user);
+
+      expect(userService.activateUser).toHaveBeenCalledTimes(2);
     }
   );
 
@@ -46,14 +65,23 @@ describe('Activating users', () => {
     };
 
     // When we attempt to activate the user in dry run mode
-    const result = await activateUserHandler(
+    const activateUserResult = await activateUserHandler(
       userService,
       deactivatedUser.id,
-      true
+      dryRunActivateUser(false)
     )();
-
     // Then the activateUser function should not have been called
-    expect(result).toEqualRight(deactivatedUser);
+    expect(activateUserResult).toEqualRight(deactivatedUser);
+
+    // When we attempt to activate the user and send activation email in dry run mode
+    const activateUserAndSendEmailResult = await activateUserHandler(
+      userService,
+      deactivatedUser.id,
+      dryRunActivateUser(true)
+    )();
+    // Then the activateUser function should not have been called
+    expect(activateUserAndSendEmailResult).toEqualRight(deactivatedUser);
+
     expect(userService.activateUser).not.toHaveBeenCalled();
   });
 
@@ -66,14 +94,24 @@ describe('Activating users', () => {
     };
 
     // When we attempt to activate the user and the request fails
-    const result = await activateUserHandler(
+    const activateUserResult = await activateUserHandler(
       userService,
       deactivatedUser.id,
-      false
+      activateUser(userService, false)
     )();
 
     // Then we should have a left
-    expect(result).toEqualLeft('expected error');
+    expect(activateUserResult).toEqualLeft('expected error');
+
+    // When we attempt to activate the user and send activation email, but the request fails
+    const activateUserAndSendEmailResult = await activateUserHandler(
+      userService,
+      deactivatedUser.id,
+      activateUser(userService, true)
+    )();
+
+    // Then we should have a left
+    expect(activateUserAndSendEmailResult).toEqualLeft('expected error');
     expect(userService.activateUser).toHaveBeenCalled();
   });
 
@@ -86,16 +124,27 @@ describe('Activating users', () => {
     };
 
     // When we attempt to activate a non-existent user
-    const result = await activateUserHandler(
+    const activateUserResult = await activateUserHandler(
       userService,
       deactivatedUser.id,
-      false
+      activateUser(userService, false)
     )();
-
     // Then we should have a left
-    expect(result).toEqualLeft(
+    expect(activateUserResult).toEqualLeft(
       'User [user_id] does not exist. Can not activate.'
     );
+
+    // When we attempt to activate a non-existent user and send activation email
+    const activateUserSendEmailResult = await activateUserHandler(
+      userService,
+      deactivatedUser.id,
+      activateUser(userService, true)
+    )();
+    // Then we should have a left
+    expect(activateUserSendEmailResult).toEqualLeft(
+      'User [user_id] does not exist. Can not activate.'
+    );
+
     expect(userService.activateUser).not.toHaveBeenCalled();
   });
 
@@ -139,10 +188,24 @@ describe('Activating users', () => {
       };
 
       // When we attempt to activate a user with status that isn't DEPROVISIONED or STAGED
-      const result = await activateUserHandler(userService, user.id, false)();
+      const activateUserResult = await activateUserHandler(
+        userService,
+        user.id,
+        activateUser(userService, false)
+      )();
 
       // Then we should have a left
-      expect(result).toEqualLeft(errorMessage);
+      expect(activateUserResult).toEqualLeft(errorMessage);
+
+      // When we attempt to activate a user with status that isn't DEPROVISIONED or STAGED and send activation email
+      const activateUserSendEmailResult = await activateUserHandler(
+        userService,
+        user.id,
+        activateUser(userService, true)
+      )();
+
+      // Then we should have a left
+      expect(activateUserSendEmailResult).toEqualLeft(errorMessage);
       expect(userService.activateUser).not.toHaveBeenCalled();
     }
   );
@@ -156,14 +219,22 @@ describe('Activating users', () => {
     };
 
     // When we attempt to activate a user but retrieving the user fails
-    const result = await activateUserHandler(
+    const activateUserResult = await activateUserHandler(
       userService,
       deactivatedUser.id,
-      false
+      activateUser(userService, false)
     )();
-
     // Then we should have a left
-    expect(result).toEqualLeft('expected error');
+    expect(activateUserResult).toEqualLeft('expected error');
+
+    // When we attempt to activate a user and send activation email but retrieving the user fails
+    const activateUserAndSendEmailResult = await activateUserHandler(
+      userService,
+      deactivatedUser.id,
+      activateUser(userService, true)
+    )();
+    // Then we should have a left
+    expect(activateUserAndSendEmailResult).toEqualLeft('expected error');
 
     // And we also expect the user service's activateUser to not have been called
     expect(userService.activateUser).not.toHaveBeenCalled();
