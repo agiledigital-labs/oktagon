@@ -108,25 +108,23 @@ const validateUserStatusPriorToActivation = (
  * @param service - the service to use to activate the user.
  * @param userId - the id of the user to activate.
  * @param sendEmail - if true, will send activation email to the user.
- * @returns a TaskEither that resolves to an array of commands to execute to activate the user.
+ * @returns a TaskEither that resolves to the activate user command
  */
-const planCommands = (
+const planCommand = (
   service: UserService,
   userId: string,
   sendEmail: boolean
-): TE.TaskEither<string, readonly Command[]> =>
+): TE.TaskEither<string, Command> =>
   pipe(
     validateUserExist(service, userId),
     TE.chain((user) => validateUserStatusPriorToActivation(user)),
     TE.chain((user) =>
-      TE.right([
-        {
-          _tag: 'ActivateUserCommand',
-          sendEmail: sendEmail,
-          service: service,
-          user: user,
-        },
-      ])
+      TE.right({
+        _tag: 'ActivateUserCommand',
+        sendEmail: sendEmail,
+        service: service,
+        user: user,
+      })
     )
   );
 
@@ -201,28 +199,6 @@ const getDryRunCommand = (command: Command): TE.TaskEither<string, User> =>
   dryRunActivateUser(command.sendEmail)(command.user);
 
 /**
- * Executes the commands.
- * @param commands - the commands to execute.
- * @returns a TaskEither that resolves to the users.
- */
-const executeCommands = (
-  commands: readonly Command[]
-): TE.TaskEither<string, readonly User[]> => {
-  return TE.traverseSeqArray(getExecutableCommand)(commands);
-};
-
-/**
- * Reports what would happen if we were to execute the commands.
- * @param commands - the commands to dry run.
- * @returns a TaskEither that resolves to the users.
- */
-const reportDryRun = (
-  commands: readonly Command[]
-): TE.TaskEither<string, readonly User[]> => {
-  return TE.traverseSeqArray(getDryRunCommand)(commands);
-};
-
-/**
  * Activates a user, only works if user currently has the status: staged or deprovisioned.
  * @param service - the service to use to activate the user.
  * @param userId - the id of the user to activate.
@@ -235,11 +211,11 @@ export const activateUserInvoker = (
   userId: string,
   dryRun: boolean,
   sendEmail: boolean
-): TE.TaskEither<string, readonly User[]> =>
+): TE.TaskEither<string, User> =>
   pipe(
-    planCommands(service, userId, sendEmail),
-    TE.chain((commands) =>
-      dryRun ? reportDryRun(commands) : executeCommands(commands)
+    planCommand(service, userId, sendEmail),
+    TE.chain((command) =>
+      dryRun ? getDryRunCommand(command) : getExecutableCommand(command)
     )
   );
 

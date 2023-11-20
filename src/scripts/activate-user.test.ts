@@ -37,7 +37,7 @@ describe('Activating users', () => {
       )();
 
       // Then we should have a left
-      expect(activateUserResult).toEqualRight([user]);
+      expect(activateUserResult).toEqualRight(user);
 
       // When we attempt to activate a user with status that isn't DEPROVISIONED or STAGED and send activation email
       const activateUserAndSendEmailResult = await activateUserInvoker(
@@ -48,7 +48,7 @@ describe('Activating users', () => {
       )();
 
       // Then we should have a left
-      expect(activateUserAndSendEmailResult).toEqualRight([user]);
+      expect(activateUserAndSendEmailResult).toEqualRight(user);
 
       expect(userService.activateUser).toHaveBeenCalledTimes(2);
     }
@@ -70,7 +70,7 @@ describe('Activating users', () => {
       false
     )();
     // Then the activateUser function should not have been called
-    expect(activateUserResult).toEqualRight([deactivatedUser]);
+    expect(activateUserResult).toEqualRight(deactivatedUser);
 
     // When we attempt to activate the user and send activation email in dry run mode
     const activateUserAndSendEmailResult = await activateUserInvoker(
@@ -80,7 +80,7 @@ describe('Activating users', () => {
       true
     )();
     // Then the activateUser function should not have been called
-    expect(activateUserAndSendEmailResult).toEqualRight([deactivatedUser]);
+    expect(activateUserAndSendEmailResult).toEqualRight(deactivatedUser);
 
     expect(userService.activateUser).not.toHaveBeenCalled();
   });
