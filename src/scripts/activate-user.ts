@@ -187,7 +187,7 @@ export const activateUser =
  * @param command - the command to get.
  * @returns a TaskEither that resolves to the user.
  */
-const getExecutableCommand = (command: Command): TE.TaskEither<string, User> =>
+const executeCommand = (command: Command): TE.TaskEither<string, User> =>
   activateUser(command.service, command.sendEmail)(command.user);
 
 /**
@@ -195,7 +195,7 @@ const getExecutableCommand = (command: Command): TE.TaskEither<string, User> =>
  * @param command - the command to get.
  * @returns a TaskEither that resolves to the user.
  */
-const getDryRunCommand = (command: Command): TE.TaskEither<string, User> =>
+const reportDryRun = (command: Command): TE.TaskEither<string, User> =>
   dryRunActivateUser(command.sendEmail)(command.user);
 
 /**
@@ -215,7 +215,7 @@ export const activateUserInvoker = (
   pipe(
     planCommand(service, userId, sendEmail),
     TE.chain((command) =>
-      dryRun ? getDryRunCommand(command) : getExecutableCommand(command)
+      dryRun ? reportDryRun(command) : executeCommand(command)
     )
   );
 
