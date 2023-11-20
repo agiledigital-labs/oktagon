@@ -16,6 +16,20 @@ type ActivatableUser = User & {
 };
 
 /**
+ * Command to activate a user.
+ */
+type ActivateUserCommand = {
+  readonly _tag: 'ActivateUserCommand';
+  readonly sendEmail: boolean;
+  readonly service: UserService;
+  readonly user: ActivatableUser;
+};
+/**
+ * Command to execute.
+ */
+type Command = ActivateUserCommand;
+
+/**
  * Checks to see if user exists.
  * @param service - the service to use to get the user.
  * @param userId - the id of the user to get.
@@ -35,6 +49,7 @@ const validateUserExist = (
       TE.fromOption(() => `User [${userId}] does not exist. Can not activate.`)
     )
   );
+
 /**
  * Checks to see if user has a status of staged or deprovisioned.
  * @param user - the user to check the status of.
@@ -87,6 +102,33 @@ const validateUserStatusPriorToActivation = (
     }
   }
 };
+
+/**
+ * Plans the commands to execute to activate the user.
+ * @param service - the service to use to activate the user.
+ * @param userId - the id of the user to activate.
+ * @param sendEmail - if true, will send activation email to the user.
+ * @returns a TaskEither that resolves to an array of commands to execute to activate the user.
+ */
+const planCommands = (
+  service: UserService,
+  userId: string,
+  sendEmail: boolean
+): TE.TaskEither<string, readonly Command[]> =>
+  pipe(
+    validateUserExist(service, userId),
+    TE.chain((user) => validateUserStatusPriorToActivation(user)),
+    TE.chain((user) =>
+      TE.right([
+        {
+          _tag: 'ActivateUserCommand',
+          sendEmail: sendEmail,
+          service: service,
+          user: user,
+        },
+      ])
+    )
+  );
 
 /**
  * Prints out what would happen if we were to activate the user.
@@ -143,21 +185,62 @@ export const activateUser =
     );
 
 /**
+ * Gets the command to execute.
+ * @param command - the command to get.
+ * @returns a TaskEither that resolves to the user.
+ */
+const getExecutableCommand = (command: Command): TE.TaskEither<string, User> =>
+  activateUser(command.service, command.sendEmail)(command.user);
+
+/**
+ * Gets the command to dry run.
+ * @param command - the command to get.
+ * @returns a TaskEither that resolves to the user.
+ */
+const getDryRunCommand = (command: Command): TE.TaskEither<string, User> =>
+  dryRunActivateUser(command.sendEmail)(command.user);
+
+/**
+ * Executes the commands.
+ * @param commands - the commands to execute.
+ * @returns a TaskEither that resolves to the users.
+ */
+const executeCommands = (
+  commands: readonly Command[]
+): TE.TaskEither<string, readonly User[]> => {
+  return TE.traverseSeqArray(getExecutableCommand)(commands);
+};
+
+/**
+ * Reports what would happen if we were to execute the commands.
+ * @param commands - the commands to dry run.
+ * @returns a TaskEither that resolves to the users.
+ */
+const reportDryRun = (
+  commands: readonly Command[]
+): TE.TaskEither<string, readonly User[]> => {
+  return TE.traverseSeqArray(getDryRunCommand)(commands);
+};
+
+/**
  * Activates a user, only works if user currently has the status: staged or deprovisioned.
  * @param service - the service to use to activate the user.
  * @param userId - the id of the user to activate.
- * @param dryRun - if true, will not actually activate the user, but will print out what would happen.
+ * @param dryRun - if true, will not activate the user, but will print out what would happen.
+ * @param sendEmail - if true, will send activation email to the user.
  * @returns a TaskEither that resolves to the activated user.
  */
-export const activateUserHandler = (
+export const activateUserInvoker = (
   service: UserService,
   userId: string,
-  commandHandler: (user: ActivatableUser) => TE.TaskEither<string, User>
-): TE.TaskEither<string, User> =>
+  dryRun: boolean,
+  sendEmail: boolean
+): TE.TaskEither<string, readonly User[]> =>
   pipe(
-    validateUserExist(service, userId),
-    TE.chain((user) => validateUserStatusPriorToActivation(user)),
-    TE.chain((user) => commandHandler(user))
+    planCommands(service, userId, sendEmail),
+    TE.chain((commands) =>
+      dryRun ? reportDryRun(commands) : executeCommands(commands)
+    )
   );
 
 export default (
@@ -210,16 +293,12 @@ export default (
       const client = oktaManageClient({ ...args });
       const service = new OktaUserService(client);
       const { userId, dryRun, sendEmail } = args;
-      const commandHandler: (
-        user: ActivatableUser
-      ) => TE.TaskEither<string, User> = dryRun
-        ? dryRunActivateUser(sendEmail)
-        : activateUser(service, sendEmail);
 
-      const result = await activateUserHandler(
+      const result = await activateUserInvoker(
         service,
         userId,
-        commandHandler
+        dryRun,
+        sendEmail
       )();
 
       // eslint-disable-next-line functional/no-conditional-statement
