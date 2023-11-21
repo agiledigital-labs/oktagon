@@ -131,7 +131,7 @@ export const activateUser =
         Console.info(
           `Activated [${user.id}] [${user.email}].${
             sendEmail ? ` Email has been sent to [${user.email}].` : ''
-          }}`
+          }`
         )
       ),
       TE.chain((user) => validateUserExist(service, user.id)),
