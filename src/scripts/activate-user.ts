@@ -130,7 +130,7 @@ export const activateUser =
       TE.tapIO((user) =>
         Console.info(
           `Activated [${user.id}] [${user.email}].${
-            sendEmail ? ' Email has been sent to [${user.email}].' : ''
+            sendEmail ? ` Email has been sent to [${user.email}].` : ''
           }}`
         )
       ),
