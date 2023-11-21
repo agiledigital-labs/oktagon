@@ -12,7 +12,7 @@ import * as Console from 'fp-ts/lib/Console';
 const deactivateUser = (
   service: UserService,
   userId: string
-): TE.TaskEither<string, User> =>
+): TE.TaskEither<Error, User> =>
   pipe(
     userId,
     service.getUser,
@@ -20,7 +20,9 @@ const deactivateUser = (
       flow(
         O.fold(
           () =>
-            TE.left(`User [${userId}] does not exist. Can not de-activate.`),
+            TE.left(
+              new Error(`User [${userId}] does not exist. Can not de-activate.`)
+            ),
           (user) =>
             user.deactivated ? TE.right(user) : service.deactivateUser(userId)
         )
@@ -66,7 +68,7 @@ export default (
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {
         // eslint-disable-next-line functional/no-throw-statement
-        throw new Error(result.left);
+        throw result.left;
       }
     }
   );

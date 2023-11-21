@@ -40,14 +40,14 @@ describe('Listing all users', () => {
     // Given a user service that fails to retrieve a list of users
     const userService: UserService = {
       ...test.baseUserService(),
-      listUsers: () => TE.left('expected error'),
+      listUsers: () => TE.left(new Error('expected error')),
     };
 
     // When we attempt to list the users from the client
     const result = await users(userService)();
 
     // Then we should have a left
-    expect(result).toEqualLeft('expected error');
+    expect(result).toEqualLeft(new Error('expected error'));
   });
 });
 
@@ -94,7 +94,7 @@ describe('Listing users within groups', () => {
     // Given a user service that fails to retrieve a list of users
     const userService: UserService = {
       ...test.baseUserService(),
-      listUsersInGroup: () => TE.left('expected error'),
+      listUsersInGroup: () => TE.left(new Error('expected error')),
     };
 
     // And a group service that succsessfully retreives a group
@@ -112,7 +112,7 @@ describe('Listing users within groups', () => {
     )();
 
     // Then we should have a left
-    expect(result).toEqualLeft('expected error');
+    expect(result).toEqualLeft(new Error('expected error'));
 
     // But getGroup was called
     expect(groupService.getGroup).toBeCalledWith(test.group.id);
@@ -130,7 +130,7 @@ describe('Listing users within groups', () => {
     const groupService: GroupService = {
       ...test.baseGroupService(),
       // eslint-disable-next-line unused-imports/no-unused-vars-ts, @typescript-eslint/no-unused-vars
-      getGroup: (_group) => TE.left('expected error'),
+      getGroup: (_group) => TE.left(new Error('expected error')),
     };
 
     // When we attempt to list the users from the client
@@ -141,7 +141,7 @@ describe('Listing users within groups', () => {
     )();
 
     // Then we should have a left
-    expect(result).toEqualLeft('expected error');
+    expect(result).toEqualLeft(new Error('expected error'));
 
     // And listUsersInGroup was never called
     expect(userService.listUsersInGroup).not.toHaveBeenCalled();
@@ -170,7 +170,9 @@ describe('Listing users within groups', () => {
     )();
 
     // Then we should have a left
-    expect(result).toEqualLeft('The group [group_id] does not exist');
+    expect(result).toEqualLeft(
+      new Error('The group [group_id] does not exist.')
+    );
 
     // And listUsersInGroup was never called
     expect(userService.listUsersInGroup).not.toHaveBeenCalled();

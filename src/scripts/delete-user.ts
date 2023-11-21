@@ -20,14 +20,17 @@ export const deleteUser = (
   service: UserService,
   userId: string,
   force: boolean
-): TE.TaskEither<string, User> =>
+): TE.TaskEither<Error, User> =>
   pipe(
     userId,
     service.getUser,
     TE.chain(
       flow(
         O.fold(
-          () => TE.left(`User [${userId}] does not exist. Can not delete.`),
+          () =>
+            TE.left(
+              new Error(`User [${userId}] does not exist. Can not delete.`)
+            ),
           (user) =>
             user.deactivated
               ? service.deleteUser(userId)
@@ -37,7 +40,9 @@ export const deleteUser = (
                   TE.chain((user: User) => service.deleteUser(user.id))
                 )
               : TE.left(
-                  `User [${userId}] has not been deprovisioned. Deprovision before deleting.`
+                  new Error(
+                    `User [${userId}] has not been deprovisioned. Deprovision before deleting.`
+                  )
                 )
         )
       )
@@ -87,7 +92,7 @@ export default (
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {
         // eslint-disable-next-line functional/no-throw-statement
-        throw new Error(result.left);
+        throw result.left;
       }
     }
   );

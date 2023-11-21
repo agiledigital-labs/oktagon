@@ -28,7 +28,7 @@ const removeUserFromGroup = (
   groupService: GroupService,
   user: string,
   group: string
-): TE.TaskEither<string, string> =>
+): TE.TaskEither<Error, string> =>
   pipe(
     user,
     userService.getUser,
@@ -45,7 +45,9 @@ const removeUserFromGroup = (
             E.mapLeft(
               // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
               (errors) =>
-                `${errors.join('. ')}. Can not remove user from group.`
+                new Error('Can not remove user from group.', {
+                  cause: errors.join('. '),
+                })
             ),
             TE.fromEither,
             // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
@@ -110,7 +112,7 @@ export default (
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {
         // eslint-disable-next-line functional/no-throw-statement
-        throw new Error(result.left);
+        throw result.left;
       }
     }
   );

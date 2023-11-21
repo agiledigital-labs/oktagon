@@ -11,7 +11,7 @@ export const validateUserExists = (
 ): E.Either<NEA.NonEmptyArray<string>, User> =>
   pipe(
     maybeUser,
-    E.fromOption(() => NEA.of(`User [${user}] does not exist`))
+    E.fromOption(() => NEA.of(`User [${user}] does not exist.`))
   );
 
 export const validateGroupExists = (
@@ -20,5 +20,5 @@ export const validateGroupExists = (
 ): E.Either<NEA.NonEmptyArray<string>, Group> =>
   pipe(
     maybeGroup,
-    E.fromOption(() => NEA.of(`Group [${group}] does not exist`))
+    E.fromOption(() => NEA.of(`Group [${group}] does not exist.`))
   );

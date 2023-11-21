@@ -89,7 +89,7 @@ describe('Activating users', () => {
     // Given a user
     const userService: UserService = {
       ...baseUserService(),
-      activateUser: jest.fn(() => TE.left('expected error')),
+      activateUser: jest.fn(() => TE.left(new Error('expected error'))),
       getUser: () => TE.right(O.some(deactivatedUser)),
     };
 
@@ -102,7 +102,7 @@ describe('Activating users', () => {
     )();
 
     // Then we should have a left
-    expect(activateUserResult).toEqualLeft('expected error');
+    expect(activateUserResult).toEqualLeft(new Error('expected error'));
 
     // When we attempt to activate the user and send activation email, but the request fails
     const activateUserAndSendEmailResult = await activateUserInvoker(
@@ -113,7 +113,9 @@ describe('Activating users', () => {
     )();
 
     // Then we should have a left
-    expect(activateUserAndSendEmailResult).toEqualLeft('expected error');
+    expect(activateUserAndSendEmailResult).toEqualLeft(
+      new Error('expected error')
+    );
     expect(userService.activateUser).toHaveBeenCalled();
   });
 
@@ -134,7 +136,7 @@ describe('Activating users', () => {
     )();
     // Then we should have a left
     expect(activateUserResult).toEqualLeft(
-      'User [user_id] does not exist. Can not activate.'
+      new Error('User [user_id] does not exist. Can not activate.')
     );
 
     // When we attempt to activate a non-existent user and send activation email
@@ -146,7 +148,7 @@ describe('Activating users', () => {
     )();
     // Then we should have a left
     expect(activateUserSendEmailResult).toEqualLeft(
-      'User [user_id] does not exist. Can not activate.'
+      new Error('User [user_id] does not exist. Can not activate.')
     );
 
     expect(userService.activateUser).not.toHaveBeenCalled();
@@ -155,31 +157,43 @@ describe('Activating users', () => {
   it.each([
     [
       okta.UserStatus.ACTIVE,
-      `User [user_id] [test@localhost] has status [${okta.UserStatus.ACTIVE}]. Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}.`,
+      new Error(
+        `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. User [user_id] [test@localhost] has status [${okta.UserStatus.ACTIVE}].`
+      ),
     ],
     [
       okta.UserStatus.PROVISIONED,
-      `User [user_id] [test@localhost] has status [${okta.UserStatus.PROVISIONED}]. Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please follow through with the activation workflow.`,
+      new Error(
+        `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. User [user_id] [test@localhost] has status [${okta.UserStatus.PROVISIONED}]. To transition user to ACTIVE status, please follow through with the activation workflow.`
+      ),
     ],
     [
       okta.UserStatus.LOCKED_OUT,
-      `User [user_id] [test@localhost] has status [${okta.UserStatus.LOCKED_OUT}]. Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please use the unlock command.`,
+      new Error(
+        `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. User [user_id] [test@localhost] has status [${okta.UserStatus.LOCKED_OUT}]. To transition user to ACTIVE status, please use the unlock command.`
+      ),
     ],
     [
       okta.UserStatus.PASSWORD_EXPIRED,
-      `User [user_id] [test@localhost] has status [${okta.UserStatus.PASSWORD_EXPIRED}]. Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please instruct user to login with temporary password and follow the password reset process.`,
+      new Error(
+        `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. User [user_id] [test@localhost] has status [${okta.UserStatus.PASSWORD_EXPIRED}]. To transition user to ACTIVE status, please instruct user to login with temporary password and follow the password reset process.`
+      ),
     ],
     [
       okta.UserStatus.RECOVERY,
-      `User [user_id] [test@localhost] has status [${okta.UserStatus.RECOVERY}]. Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please follow through with the activation workflow or restart the workflow using the reactivate-user command.`,
+      new Error(
+        `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. User [user_id] [test@localhost] has status [${okta.UserStatus.RECOVERY}]. To transition user to ACTIVE status, please follow through with the activation workflow or restart the workflow using the reactivate-user command.`
+      ),
     ],
     [
       okta.UserStatus.SUSPENDED,
-      `User [user_id] [test@localhost] has status [${okta.UserStatus.SUSPENDED}]. Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. To transition user to ACTIVE status, please use the unsuspend-user command.`,
+      new Error(
+        `Activation is reserved for users with status ${okta.UserStatus.STAGED} or ${okta.UserStatus.DEPROVISIONED}. User [user_id] [test@localhost] has status [${okta.UserStatus.SUSPENDED}]. To transition user to ACTIVE status, please use the unsuspend-user command.`
+      ),
     ],
   ])(
     'fails when attempting to activate a user with status %s',
-    async (status, errorMessage) => {
+    async (status, error) => {
       // Given a user with status status
       const user: User = {
         ...deactivatedUser,
@@ -200,7 +214,7 @@ describe('Activating users', () => {
       )();
 
       // Then we should have a left
-      expect(activateUserResult).toEqualLeft(errorMessage);
+      expect(activateUserResult).toEqualLeft(error);
 
       // When we attempt to activate a user with status that isn't DEPROVISIONED or STAGED and send activation email
       const activateUserSendEmailResult = await activateUserInvoker(
@@ -211,7 +225,7 @@ describe('Activating users', () => {
       )();
 
       // Then we should have a left
-      expect(activateUserSendEmailResult).toEqualLeft(errorMessage);
+      expect(activateUserSendEmailResult).toEqualLeft(error);
       expect(userService.activateUser).not.toHaveBeenCalled();
     }
   );
@@ -221,7 +235,7 @@ describe('Activating users', () => {
     const userService: UserService = {
       ...baseUserService(),
       activateUser: jest.fn(() => TE.right(deactivatedUser)),
-      getUser: () => TE.left('expected error'),
+      getUser: () => TE.left(new Error('expected error')),
     };
 
     // When we attempt to activate a user but retrieving the user fails
@@ -232,7 +246,7 @@ describe('Activating users', () => {
       false
     )();
     // Then we should have a left
-    expect(activateUserResult).toEqualLeft('expected error');
+    expect(activateUserResult).toEqualLeft(new Error('expected error'));
 
     // When we attempt to activate a user and send activation email but retrieving the user fails
     const activateUserAndSendEmailResult = await activateUserInvoker(
@@ -242,7 +256,9 @@ describe('Activating users', () => {
       true
     )();
     // Then we should have a left
-    expect(activateUserAndSendEmailResult).toEqualLeft('expected error');
+    expect(activateUserAndSendEmailResult).toEqualLeft(
+      new Error('expected error')
+    );
 
     // And we also expect the user service's activateUser to not have been called
     expect(userService.activateUser).not.toHaveBeenCalled();

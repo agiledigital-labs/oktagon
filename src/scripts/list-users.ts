@@ -57,8 +57,8 @@ export const usersInGroup = (
     groupService.getGroup(groupId),
     TE.chain(
       O.fold(
-        (): TE.TaskEither<string, Group> =>
-          TE.left(`The group [${groupId}] does not exist`),
+        (): TE.TaskEither<Error, Group> =>
+          TE.left(new Error(`The group [${groupId}] does not exist.`)),
         (group: Group) => TE.right(group)
       )
     ),
@@ -106,14 +106,14 @@ export default (
       // eslint-disable-next-line functional/no-expression-statement
       Console.info(args.groupId);
 
-      const result: E.Either<string, string> = await (args.groupId === undefined
+      const result: E.Either<Error, string> = await (args.groupId === undefined
         ? users(userService)
         : usersInGroup(userService, groupService, args.groupId))();
 
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {
         // eslint-disable-next-line functional/no-throw-statement
-        throw new Error(result.left);
+        throw result.left;
       }
     }
   );

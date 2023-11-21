@@ -17,7 +17,7 @@ const createUser = (
   email: string,
   firstName: string,
   lastName: string
-): TE.TaskEither<string, User> =>
+): TE.TaskEither<Error, User> =>
   pipe(
     email,
     service.getUser,
@@ -27,7 +27,9 @@ const createUser = (
           () => service.createUser(email, firstName, lastName, password),
           (user) =>
             TE.left(
-              `User [${email}] already exists with id [${user.id}]. Can not create a new user.`
+              new Error(
+                `User [${email}] already exists with id [${user.id}]. Can not create a new user.`
+              )
             )
         )
       )
@@ -110,7 +112,7 @@ export default (
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {
         // eslint-disable-next-line functional/no-throw-statement
-        throw new Error(result.left);
+        throw result.left;
       }
     }
   );

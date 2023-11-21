@@ -62,7 +62,7 @@ export class OktaUserService {
    * @param userId the id of the user whose details should be retrieved.
    * @returns either the user details or undefined if that user does not exist.
    */
-  readonly getUser = (userId: string): TE.TaskEither<string, O.Option<User>> =>
+  readonly getUser = (userId: string): TE.TaskEither<Error, O.Option<User>> =>
     TE.tryCatch(
       () =>
         // eslint-disable-next-line functional/no-this-expression
@@ -77,9 +77,9 @@ export class OktaUserService {
               : Promise.reject(error);
           }),
       (error: unknown) =>
-        `Failed fetching user details for [${userId}] because of [${JSON.stringify(
-          error
-        )}]`
+        new Error(`Failed fetching user details for [${userId}].`, {
+          cause: error,
+        })
     );
 
   readonly createUser = (
@@ -87,7 +87,7 @@ export class OktaUserService {
     firstName: string,
     lastName: string,
     password: string
-  ): TE.TaskEither<string, User> => {
+  ): TE.TaskEither<Error, User> => {
     const userToCreate = {
       profile: {
         firstName: firstName,
@@ -103,34 +103,37 @@ export class OktaUserService {
       // eslint-disable-next-line functional/no-this-expression
       () => this.client.createUser(userToCreate).then(oktaUserAsUser),
       (error: unknown) =>
-        `Failed to create user [${email}] because of [${JSON.stringify(
-          error
-        )}].`
+        new Error(`Failed to create user [${email}].`, {
+          cause: error,
+        })
     );
   };
 
   // eslint-disable-next-line functional/functional-parameters
-  readonly listUsers = (): TE.TaskEither<string, readonly User[]> =>
+  readonly listUsers = (): TE.TaskEither<Error, readonly User[]> =>
     // eslint-disable-next-line functional/no-this-expression
     this.privateListUsers(TE.right(this.client));
 
   readonly listUsersInGroup = (
     group: Group
-  ): TE.TaskEither<string, readonly User[]> =>
+  ): TE.TaskEither<Error, readonly User[]> =>
     pipe(
       group,
       (group: Group) =>
         TE.tryCatch(
           // eslint-disable-next-line functional/no-this-expression
           () => this.client.getGroup(group.id),
-          (error: unknown) => `Fail ${JSON.stringify(error)}`
+          (error: unknown) =>
+            new Error(`Failed to list users in group [${group.id}].`, {
+              cause: error,
+            })
         ),
       // eslint-disable-next-line functional/no-this-expression
       this.privateListUsers
     );
 
   readonly privateListUsers = (
-    groupOrClient: TE.TaskEither<string, okta.Group | okta.Client>
+    groupOrClient: TE.TaskEither<Error, okta.Group | okta.Client>
   ) =>
     // We need to populate users with all of the client data so it can be
     // returned. Okta's listUsers() function returns a custom collection that
@@ -156,11 +159,13 @@ export class OktaUserService {
           );
         },
         (error: unknown) =>
-          `Failed to list users because of [${JSON.stringify(error)}].`
+          new Error('Failed to list users.', {
+            cause: error,
+          })
       )
     )(groupOrClient);
 
-  readonly deleteUser = (userId: string): TE.TaskEither<string, User> =>
+  readonly deleteUser = (userId: string): TE.TaskEither<Error, User> =>
     TE.tryCatch(
       () =>
         // eslint-disable-next-line functional/no-this-expression, @typescript-eslint/prefer-readonly-parameter-types
@@ -173,12 +178,12 @@ export class OktaUserService {
             .then(() => oktaUserAsUser(user))
         ),
       (error: unknown) =>
-        `Failed to delete user [${userId}] because of [${JSON.stringify(
-          error
-        )}].`
+        new Error(`Failed to delete user [${userId}].`, {
+          cause: error,
+        })
     );
 
-  readonly deactivateUser = (userId: string): TE.TaskEither<string, User> =>
+  readonly deactivateUser = (userId: string): TE.TaskEither<Error, User> =>
     TE.tryCatch(
       () =>
         // eslint-disable-next-line functional/no-this-expression, @typescript-eslint/prefer-readonly-parameter-types
@@ -191,9 +196,9 @@ export class OktaUserService {
             .then(() => oktaUserAsUser(user))
         ),
       (error: unknown) =>
-        `Failed to deactivate user [${userId}] because of [${JSON.stringify(
-          error
-        )}].`
+        new Error(`Failed to deactivate user [${userId}].`, {
+          cause: error,
+        })
     );
 
   /**
@@ -205,7 +210,7 @@ export class OktaUserService {
   readonly activateUser = (
     userId: string,
     sendEmail: boolean
-  ): TE.TaskEither<string, User> =>
+  ): TE.TaskEither<Error, User> =>
     TE.tryCatch(
       () =>
         // eslint-disable-next-line functional/no-this-expression, @typescript-eslint/prefer-readonly-parameter-types
@@ -218,15 +223,15 @@ export class OktaUserService {
             .then(() => oktaUserAsUser(user))
         ),
       (error: unknown) =>
-        `Failed to activate user [${userId}] because of [${JSON.stringify(
-          error
-        )}].`
+        new Error(`Failed to activate user [${userId}].`, {
+          cause: error,
+        })
     );
 
   readonly expirePasswordAndGetTemporaryPassword = (
     userId: string
   ): TE.TaskEither<
-    string,
+    Error,
     { readonly user: User; readonly temporaryPassword: string }
   > =>
     TE.tryCatch(
@@ -241,9 +246,9 @@ export class OktaUserService {
             }))
         ),
       (error: unknown) =>
-        `Failed to expire user password [${userId}] because of [${JSON.stringify(
-          error
-        )}].`
+        new Error(`Failed to expire user password [${userId}].`, {
+          cause: error,
+        })
     );
 }
 

@@ -30,7 +30,7 @@ type PasswordExpirableUser = User & {
 const validateUserExist = (
   service: UserService,
   userId: string
-): TE.TaskEither<string, User> =>
+): TE.TaskEither<Error, User> =>
   pipe(
     Console.info(`Fetching user with ID [${userId}]...`),
     TE.rightIO,
@@ -39,7 +39,8 @@ const validateUserExist = (
     TE.chain(
       TE.fromOption(
         // eslint-disable-next-line functional/functional-parameters
-        () => `User [${userId}] does not exist. Can not expire password.`
+        () =>
+          new Error(`User [${userId}] does not exist. Can not expire password.`)
       )
     )
   );
@@ -51,7 +52,7 @@ const validateUserExist = (
  */
 const validateUserStatusPriorToPasswordExpiration = (
   user: User
-): TE.TaskEither<string, PasswordExpirableUser> => {
+): TE.TaskEither<Error, PasswordExpirableUser> => {
   const userStatus = user.status;
 
   // eslint-disable-next-line functional/no-conditional-statement
@@ -59,7 +60,9 @@ const validateUserStatusPriorToPasswordExpiration = (
     case okta.UserStatus.SUSPENDED:
     case okta.UserStatus.DEPROVISIONED: {
       return TE.left(
-        `User [${user.id}] [${user.email}] has status [${userStatus}]. Expiring a password is reserved for users with status: ${okta.UserStatus.ACTIVE}, ${okta.UserStatus.STAGED}, ${okta.UserStatus.PROVISIONED}, ${okta.UserStatus.LOCKED_OUT}, ${okta.UserStatus.RECOVERY}, or ${okta.UserStatus.PASSWORD_EXPIRED}.`
+        new Error(
+          `Expiring a password is reserved for users with status: ${okta.UserStatus.ACTIVE}, ${okta.UserStatus.STAGED}, ${okta.UserStatus.PROVISIONED}, ${okta.UserStatus.LOCKED_OUT}, ${okta.UserStatus.RECOVERY}, or ${okta.UserStatus.PASSWORD_EXPIRED}. User [${user.id}] [${user.email}] has status [${userStatus}].`
+        )
       );
     }
     default: {
@@ -79,7 +82,7 @@ const validateUserStatusPriorToPasswordExpiration = (
 const dryRunExpirePasswordAndGetTemporaryPassword = (
   user: PasswordExpirableUser
 ): TE.TaskEither<
-  string,
+  Error,
   { readonly user: User; readonly temporaryPassword: string }
 > =>
   pipe(
@@ -101,7 +104,7 @@ const expirePasswordAndGetTemporaryPassword = (
   service: UserService,
   user: PasswordExpirableUser
 ): TE.TaskEither<
-  string,
+  Error,
   { readonly user: User; readonly temporaryPassword: string }
 > =>
   pipe(
@@ -130,7 +133,7 @@ export const expirePasswordAndGetTemporaryPasswordHandler = (
   userId: string,
   dryRun: boolean
 ): TE.TaskEither<
-  string,
+  Error,
   { readonly user: User; readonly temporaryPassword: string }
 > =>
   pipe(
@@ -192,7 +195,7 @@ export default (
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {
         // eslint-disable-next-line functional/no-throw-statement
-        throw new Error(result.left);
+        throw result.left;
       }
     }
   );
