@@ -27,23 +27,23 @@ const multiply = (a: number, b: number): number => a * b;
 const divide = (a: number, b: number): number => a / b;
 
 /**
- *
- * @param instructions -
- * @returns
+ * Checks to see if commands are valid.
+ * @param commands - the commands to validate.
+ * @returns a TaskEither that resolves to the commands if the commands are valid, otherwise an error message.
  */
-const planCommand = (
-  instructions: readonly Command[]
-): TE.TaskEither<Error, readonly Command[]> => {
-  const divideBy0Error = instructions.some(
-    (instruction) => instruction._tag === '/' && instruction.value === 0
-  );
-  // eslint-disable-next-line functional/no-conditional-statement
-  if (divideBy0Error) {
-    return TE.left(new Error('Cannot divide by 0'));
-  }
-  return TE.right(instructions);
-};
+const validateCommands = (
+  commands: readonly Command[]
+): TE.TaskEither<Error, readonly Command[]> =>
+  commands.some((command) => command._tag === '/' && command.value === 0)
+    ? TE.left(new Error('Cannot divide by 0'))
+    : TE.right(commands);
 
+/**
+ * Calculates the new value based on the current value and the command.
+ * @param currentValue - the current value.
+ * @param command - the command to execute.
+ * @returns a TaskEither that resolves to the new value and a log message if the command is valid, otherwise an error message.
+ */
 const calculate = (
   currentValue: number,
   command: Command
@@ -84,6 +84,12 @@ const calculate = (
   }
 };
 
+/**
+ * Prints out what would happen if the command was executed.
+ * @param currentValue - the current value.
+ * @param command - the command to dry run.
+ * @returns a TaskEither that resolves to the new value if the command is valid, otherwise an error message.
+ */
 const dryRun = (
   currentValue: number,
   command: Command
@@ -93,7 +99,11 @@ const dryRun = (
     TE.tapIO(({ log }) => Console.info(log)),
     TE.chain(({ newValue }) => TE.right(newValue))
   );
-
+/**
+ * Prints out what would happen if the commands were executed.
+ * @param commands - the commands to dry run.
+ * @returns a TaskEither that resolves to the new value if the commands are valid, otherwise an error message.
+ */
 const reportDryRun = (
   commands: readonly Command[]
 ): TE.TaskEither<Error, number> =>
@@ -113,6 +123,11 @@ const reportDryRun = (
     TE.tapIO((finalValue) => Console.info(`New value will be [${finalValue}].`))
   );
 
+/**
+ * Executes the command.
+ * @param command - the command to execute.
+ * @returns a TaskEither that resolves to the new value if the command is valid, otherwise an error message.
+ */
 const executeCommand = (command: Command): TE.TaskEither<Error, number> =>
   pipe(
     fetchCurrentValue(),
@@ -121,6 +136,11 @@ const executeCommand = (command: Command): TE.TaskEither<Error, number> =>
     TE.chain(({ newValue }) => updateCurrentValue(newValue))
   );
 
+/**
+ * Executes the commands.
+ * @param commands - the commands to execute.
+ * @returns a TaskEither that resolves to the new value if the commands are valid, otherwise an error message.
+ */
 const executeCommands = (
   commands: readonly Command[]
 ): TE.TaskEither<Error, number> =>
@@ -138,10 +158,13 @@ const executeCommands = (
         : TE.right(finalValue);
     })
   );
-
-const getUndoCommands = (commands: readonly Command[]): readonly Command[] => {
-  const reversedCommands: readonly Command[] = [...commands].reverse();
-  return reversedCommands.map((command) => ({
+/**
+ * Given a list of commands, returns the list of commands that would undo the original commands.
+ * @param commands - the commands to undo.
+ * @returns a TaskEither that resolves to the new value if the commands are valid, otherwise an error message.
+ */
+const getUndoCommands = (commands: readonly Command[]): readonly Command[] =>
+  [...commands].reverse().map((command) => ({
     ...command,
     _tag:
       command._tag === '+'
@@ -152,22 +175,38 @@ const getUndoCommands = (commands: readonly Command[]): readonly Command[] => {
         ? '/'
         : '*',
   }));
-};
 
+/**
+ * Undo the commands.
+ * @param commands - the commands to undo.
+ * @returns a TaskEither that resolves to the new value if the commands are valid, otherwise an error message.
+ */
 const undoCommands = (
   commands: readonly Command[]
 ): TE.TaskEither<Error, number> => executeCommands(getUndoCommands(commands));
+
+/**
+ * Prints out what would happen if the commands were undone.
+ * @param commands - the commands to undo.
+ * @returns a TaskEither that resolves to the new value if the commands are valid, otherwise an error message.
+ */
 const reportUndoDryRun = (
   commands: readonly Command[]
 ): TE.TaskEither<Error, number> => reportDryRun(getUndoCommands(commands));
 
+/**
+ * Invokes the commands with the given commandHandler.
+ * @param commands - the commands to execute.
+ * @param commandHandler - the command handler to use.
+ * @returns a TaskEither that resolves to the new value if the commands are valid, otherwise an error message.
+ */
 export const calculatorInvoker = (
   commands: readonly Command[],
   commandHandler: (commands: readonly Command[]) => TE.TaskEither<Error, number>
 ): TE.TaskEither<Error, number> =>
   pipe(
     commands,
-    planCommand,
+    validateCommands,
     TE.chain((commands) => commandHandler(commands)),
     // eslint-disable-next-line functional/functional-parameters
     TE.chain(() => fetchCurrentValue()),
