@@ -16,42 +16,23 @@ const updateCurrentValue = (value: number): TE.TaskEither<Error, number> => {
 };
 
 type Operation = '+' | '-' | '*' | '/';
-type Instruction = {
+type Command = {
   readonly _tag: Operation;
   readonly value: number;
 };
-
-type AdditionCommand = Instruction & {
-  readonly _tag: '+';
-};
-
-type SubstractionCommand = Instruction & {
-  readonly _tag: '-';
-};
-type MultiplicationCommand = Instruction & {
-  readonly _tag: '*';
-};
-
-type DivideCommand = Instruction & {
-  readonly _tag: '/';
-};
-
-/**
- * Command to execute.
- */
-type Command =
-  | AdditionCommand
-  | SubstractionCommand
-  | MultiplicationCommand
-  | DivideCommand;
 
 const add = (a: number, b: number): number => a + b;
 const substract = (a: number, b: number): number => a - b;
 const multiply = (a: number, b: number): number => a * b;
 const divide = (a: number, b: number): number => a / b;
 
+/**
+ *
+ * @param instructions -
+ * @returns
+ */
 const planCommand = (
-  instructions: readonly Instruction[]
+  instructions: readonly Command[]
 ): TE.TaskEither<Error, readonly Command[]> => {
   const divideBy0Error = instructions.some(
     (instruction) => instruction._tag === '/' && instruction.value === 0
@@ -158,16 +139,36 @@ const executeCommands = (
     })
   );
 
+const getUndoCommands = (commands: readonly Command[]): readonly Command[] => {
+  const reversedCommands: readonly Command[] = [...commands].reverse();
+  return reversedCommands.map((command) => ({
+    ...command,
+    _tag:
+      command._tag === '+'
+        ? '-'
+        : command._tag === '-'
+        ? '+'
+        : command._tag === '*'
+        ? '/'
+        : '*',
+  }));
+};
+
+const undoCommands = (
+  commands: readonly Command[]
+): TE.TaskEither<Error, number> => executeCommands(getUndoCommands(commands));
+const reportUndoDryRun = (
+  commands: readonly Command[]
+): TE.TaskEither<Error, number> => reportDryRun(getUndoCommands(commands));
+
 export const calculatorInvoker = (
-  instructions: readonly Instruction[],
-  dryRun: boolean
+  commands: readonly Command[],
+  commandHandler: (commands: readonly Command[]) => TE.TaskEither<Error, number>
 ): TE.TaskEither<Error, number> =>
   pipe(
-    instructions,
+    commands,
     planCommand,
-    TE.chain((commands) =>
-      dryRun ? reportDryRun(commands) : executeCommands(commands)
-    ),
+    TE.chain((commands) => commandHandler(commands)),
     // eslint-disable-next-line functional/functional-parameters
     TE.chain(() => fetchCurrentValue()),
     TE.tapIO((currentValue) =>
@@ -175,7 +176,18 @@ export const calculatorInvoker = (
     )
   );
 
-const caller = async (dryRun: boolean) => {
+const caller = async (dryRun: boolean, undo: boolean) => {
+  const commandHandler: (
+    commands: readonly Command[]
+  ) => TE.TaskEither<Error, number> =
+    dryRun && undo
+      ? reportUndoDryRun
+      : dryRun
+      ? reportDryRun
+      : undo
+      ? undoCommands
+      : executeCommands;
+
   const result = await calculatorInvoker(
     [
       {
@@ -207,8 +219,9 @@ const caller = async (dryRun: boolean) => {
         value: 4,
       },
     ],
-    dryRun
+    commandHandler
   )();
+
   // eslint-disable-next-line functional/no-conditional-statement
   if (E.isLeft(result)) {
     // eslint-disable-next-line functional/no-throw-statement
@@ -216,7 +229,7 @@ const caller = async (dryRun: boolean) => {
   }
 };
 // eslint-disable-next-line functional/no-expression-statement, functional/no-return-void
-caller(false).catch((error) => {
+caller(false, false).catch((error) => {
   // eslint-disable-next-line functional/no-expression-statement
   console.info(error);
 });
