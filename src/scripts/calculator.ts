@@ -3,7 +3,7 @@ import * as E from 'fp-ts/lib/Either';
 import { pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
 // eslint-disable-next-line functional/no-let
-let currentValue = 0;
+let currentValue = 10.5;
 
 // eslint-disable-next-line functional/functional-parameters
 const fetchCurrentValue = (): TE.TaskEither<Error, number> =>
@@ -15,14 +15,38 @@ const updateCurrentValue = (value: number): TE.TaskEither<Error, number> => {
   return TE.right(currentValue);
 };
 
-type Operation = '+' | '-' | '*' | '/';
-type Command = {
-  readonly _tag: Operation;
+type AdditionCommand = {
+  readonly operation: '+';
+  readonly undoOperation: '-';
   readonly value: number;
 };
+type SubtractionCommand = {
+  readonly operation: '-';
+  readonly undoOperation: '+';
+  readonly value: number;
+};
+type MultiplicationCommand = {
+  readonly operation: '*';
+  readonly undoOperation: '/';
+  readonly value: number;
+};
+type DivisionCommand = {
+  readonly operation: '/';
+  readonly undoOperation: '*';
+  readonly value: number;
+};
+type Instruction = {
+  readonly operation: '+' | '-' | '*' | '/';
+  readonly value: number;
+};
+type Command =
+  | AdditionCommand
+  | SubtractionCommand
+  | MultiplicationCommand
+  | DivisionCommand;
 
 const add = (a: number, b: number): number => a + b;
-const substract = (a: number, b: number): number => a - b;
+const subtract = (a: number, b: number): number => a - b;
 const multiply = (a: number, b: number): number => a * b;
 const divide = (a: number, b: number): number => a / b;
 
@@ -31,12 +55,53 @@ const divide = (a: number, b: number): number => a / b;
  * @param commands - the commands to validate.
  * @returns a TaskEither that resolves to the commands if the commands are valid, otherwise an error message.
  */
-const validateCommands = (
-  commands: readonly Command[]
-): TE.TaskEither<Error, readonly Command[]> =>
-  commands.some((command) => command._tag === '/' && command.value === 0)
-    ? TE.left(new Error('Cannot divide by 0'))
-    : TE.right(commands);
+const planCommands = (
+  instructions: readonly Instruction[]
+): TE.TaskEither<Error, readonly Command[]> => {
+  // eslint-disable-next-line functional/no-conditional-statement
+  if (
+    instructions.some(
+      (instruction) => instruction.operation === '/' && instruction.value === 0
+    )
+  ) {
+    return TE.left(new Error('Cannot divide by 0'));
+  }
+  return TE.right(
+    instructions.map((instruction) => {
+      // eslint-disable-next-line functional/no-conditional-statement
+      switch (instruction.operation) {
+        case '+': {
+          return {
+            operation: instruction.operation,
+            undoOperation: '-',
+            value: instruction.value,
+          };
+        }
+        case '-': {
+          return {
+            operation: instruction.operation,
+            undoOperation: '+',
+            value: instruction.value,
+          };
+        }
+        case '*': {
+          return {
+            operation: instruction.operation,
+            undoOperation: '/',
+            value: instruction.value,
+          };
+        }
+        case '/': {
+          return {
+            operation: instruction.operation,
+            undoOperation: '*',
+            value: instruction.value,
+          };
+        }
+      }
+    })
+  );
+};
 
 /**
  * Calculates the new value based on the current value and the command.
@@ -52,7 +117,7 @@ const calculate = (
   { readonly newValue: number; readonly log: string }
 > => {
   // eslint-disable-next-line functional/no-conditional-statement
-  switch (command._tag) {
+  switch (command.operation) {
     case '+': {
       const newValue = add(currentValue, command.value);
       return TE.right({
@@ -61,7 +126,7 @@ const calculate = (
       });
     }
     case '-': {
-      const newValue = substract(currentValue, command.value);
+      const newValue = subtract(currentValue, command.value);
       return TE.right({
         newValue,
         log: `${currentValue} - ${command.value} = ${newValue}`,
@@ -164,17 +229,42 @@ const executeCommands = (
  * @returns a TaskEither that resolves to the new value if the commands are valid, otherwise an error message.
  */
 const getUndoCommands = (commands: readonly Command[]): readonly Command[] =>
-  [...commands].reverse().map((command) => ({
-    ...command,
-    _tag:
-      command._tag === '+'
-        ? '-'
-        : command._tag === '-'
-        ? '+'
-        : command._tag === '*'
-        ? '/'
-        : '*',
-  }));
+  [...commands].reverse().map((command) => {
+    // eslint-disable-next-line functional/no-conditional-statement
+    switch (command.operation) {
+      case '+': {
+        return {
+          ...command,
+          operation: command.undoOperation,
+          undoOperation: command.operation,
+        };
+      }
+      // eslint-disable-next-line sonarjs/no-duplicated-branches
+      case '-': {
+        return {
+          ...command,
+          operation: command.undoOperation,
+          undoOperation: command.operation,
+        };
+      }
+      // eslint-disable-next-line sonarjs/no-duplicated-branches
+      case '*': {
+        return {
+          ...command,
+          operation: command.undoOperation,
+          undoOperation: command.operation,
+        };
+      }
+      // eslint-disable-next-line sonarjs/no-duplicated-branches
+      case '/': {
+        return {
+          ...command,
+          operation: command.undoOperation,
+          undoOperation: command.operation,
+        };
+      }
+    }
+  });
 
 /**
  * Undo the commands.
@@ -195,18 +285,18 @@ const reportUndoDryRun = (
 ): TE.TaskEither<Error, number> => reportDryRun(getUndoCommands(commands));
 
 /**
- * Invokes the commands with the given commandHandler.
+ * Receives a list of commands and executes them.
  * @param commands - the commands to execute.
  * @param commandHandler - the command handler to use.
  * @returns a TaskEither that resolves to the new value if the commands are valid, otherwise an error message.
  */
-export const calculatorInvoker = (
-  commands: readonly Command[],
+export const commandReceiver = (
+  instructions: readonly Instruction[],
   commandHandler: (commands: readonly Command[]) => TE.TaskEither<Error, number>
 ): TE.TaskEither<Error, number> =>
   pipe(
-    commands,
-    validateCommands,
+    instructions,
+    planCommands,
     TE.chain((commands) => commandHandler(commands)),
     // eslint-disable-next-line functional/functional-parameters
     TE.chain(() => fetchCurrentValue()),
@@ -215,7 +305,9 @@ export const calculatorInvoker = (
     )
   );
 
-const caller = async (dryRun: boolean, undo: boolean) => {
+const caller = async (currentValue: number, dryRun: boolean, undo: boolean) => {
+  // eslint-disable-next-line functional/no-expression-statement
+  updateCurrentValue(currentValue);
   const commandHandler: (
     commands: readonly Command[]
   ) => TE.TaskEither<Error, number> =
@@ -227,34 +319,34 @@ const caller = async (dryRun: boolean, undo: boolean) => {
       ? undoCommands
       : executeCommands;
 
-  const result = await calculatorInvoker(
+  const result = await commandReceiver(
     [
       {
-        _tag: '+',
+        operation: '+',
         value: 1,
       },
       {
-        _tag: '+',
+        operation: '+',
         value: 5,
       },
       {
-        _tag: '+',
+        operation: '+',
         value: 7,
       },
       {
-        _tag: '*',
+        operation: '*',
         value: 7,
       },
       {
-        _tag: '-',
+        operation: '-',
         value: 7,
       },
       {
-        _tag: '/',
+        operation: '/',
         value: 2,
       },
       {
-        _tag: '/',
+        operation: '/',
         value: 4,
       },
     ],
@@ -268,7 +360,7 @@ const caller = async (dryRun: boolean, undo: boolean) => {
   }
 };
 // eslint-disable-next-line functional/no-expression-statement, functional/no-return-void
-caller(false, false).catch((error) => {
+caller(12.25, false, false).catch((error) => {
   // eslint-disable-next-line functional/no-expression-statement
   console.info(error);
 });
