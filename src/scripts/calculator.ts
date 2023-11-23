@@ -46,14 +46,41 @@ const updateCurrentValue = (
 
 type Instruction = {
   readonly operation: '+' | '-' | '*' | '/';
-  readonly undoOperation: '+' | '-' | '*' | '/';
   readonly value: number;
 };
-
-type Command = Instruction & {
+type AdditionCommand = {
+  readonly operation: '+';
+  readonly undoOperation: '-';
+  readonly value: number;
   readonly execute: (a: number, b: number) => number;
   readonly undo: (a: number, b: number) => number;
 };
+type SubtractionCommand = {
+  readonly operation: '-';
+  readonly undoOperation: '+';
+  readonly value: number;
+  readonly execute: (a: number, b: number) => number;
+  readonly undo: (a: number, b: number) => number;
+};
+type MultiplicationCommand = {
+  readonly operation: '*';
+  readonly undoOperation: '/';
+  readonly value: number;
+  readonly execute: (a: number, b: number) => number;
+  readonly undo: (a: number, b: number) => number;
+};
+type DivisionCommand = {
+  readonly operation: '/';
+  readonly undoOperation: '*';
+  readonly value: number;
+  readonly execute: (a: number, b: number) => number;
+  readonly undo: (a: number, b: number) => number;
+};
+type Command =
+  | AdditionCommand
+  | SubtractionCommand
+  | MultiplicationCommand
+  | DivisionCommand;
 
 const add = (a: number, b: number): number => a + b;
 const subtract = (a: number, b: number): number => a - b;
@@ -71,17 +98,8 @@ const planCommands = (
 ): TE.TaskEither<Error, readonly Command[]> => {
   const errors: readonly Error[] = instructions
     .map((instruction, index) =>
-      !(
-        (instruction.operation === '+' && instruction.undoOperation === '-') ||
-        (instruction.operation === '-' && instruction.undoOperation === '+') ||
-        (instruction.operation === '*' && instruction.undoOperation === '/') ||
-        (instruction.operation === '/' && instruction.undoOperation === '*')
-      )
-        ? new Error(
-            `Invalid instruction at index [${index}]. The operation [${instruction.operation}] cannot be undone with the operation [${instruction.undoOperation}].`
-          )
-        : instruction.operation === '/' && instruction.value === 0
-        ? new Error('Cannot divide by 0')
+      instruction.operation === '/' && instruction.value === 0
+        ? new Error(`Error at instruction [${index}]: Cannot divide by 0.`)
         : undefined
     )
     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
@@ -98,28 +116,36 @@ const planCommands = (
       switch (instruction.operation) {
         case '+': {
           return {
-            ...instruction,
+            operation: instruction.operation,
+            undoOperation: '-',
+            value: instruction.value,
             execute: add,
             undo: subtract,
           };
         }
         case '-': {
           return {
-            ...instruction,
+            operation: instruction.operation,
+            undoOperation: '+',
+            value: instruction.value,
             execute: subtract,
             undo: add,
           };
         }
         case '*': {
           return {
-            ...instruction,
+            operation: instruction.operation,
+            undoOperation: '/',
+            value: instruction.value,
             execute: multiply,
             undo: divide,
           };
         }
         case '/': {
           return {
-            ...instruction,
+            operation: instruction.operation,
+            undoOperation: '*',
+            value: instruction.value,
             execute: divide,
             undo: multiply,
           };
@@ -328,11 +354,11 @@ export const commandHandler = (
   );
 
 /**
- * Undoes the last command
+ * Handles undoing of most recent command.
  * @param dryRun - whether to dry run the undo commands
  * @returns a TaskEither that resolves to the new value if the commands are valid, otherwise an error message.
  */
-export const undoReceiver = (dryRun: boolean): TE.TaskEither<Error, number> =>
+export const undoHandler = (dryRun: boolean): TE.TaskEither<Error, number> =>
   pipe(
     Console.info(
       dryRun
@@ -359,37 +385,30 @@ const caller = async (currentValue?: number) => {
       [
         {
           operation: '+',
-          undoOperation: '-',
           value: 1,
         },
         {
           operation: '+',
-          undoOperation: '-',
           value: 5,
         },
         {
           operation: '+',
-          undoOperation: '-',
           value: 7,
         },
         {
           operation: '*',
-          undoOperation: '/',
           value: 7,
         },
         {
           operation: '-',
-          undoOperation: '+',
           value: 7,
         },
         {
           operation: '/',
-          undoOperation: '*',
           value: 2,
         },
         {
           operation: '/',
-          undoOperation: '*',
           value: 4,
         },
       ],
@@ -404,7 +423,7 @@ const caller = async (currentValue?: number) => {
 
     // eslint-disable-next-line functional/no-expression-statement
     console.info('\n');
-    const undoResult1 = await undoReceiver(false)();
+    const undoResult1 = await undoHandler(false)();
     // eslint-disable-next-line functional/no-conditional-statement
     if (E.isLeft(undoResult1)) {
       // eslint-disable-next-line functional/no-throw-statement
@@ -413,7 +432,7 @@ const caller = async (currentValue?: number) => {
 
     // eslint-disable-next-line functional/no-expression-statement
     console.info('\n');
-    const undoResult2 = await undoReceiver(false)();
+    const undoResult2 = await undoHandler(false)();
     // eslint-disable-next-line functional/no-conditional-statement
     if (E.isLeft(undoResult2)) {
       // eslint-disable-next-line functional/no-throw-statement
@@ -422,7 +441,7 @@ const caller = async (currentValue?: number) => {
 
     // eslint-disable-next-line functional/no-expression-statement
     console.info('\n');
-    const undoResult3 = await undoReceiver(false)();
+    const undoResult3 = await undoHandler(false)();
     // eslint-disable-next-line functional/no-conditional-statement
     if (E.isLeft(undoResult3)) {
       // eslint-disable-next-line functional/no-throw-statement
