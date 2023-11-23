@@ -100,7 +100,6 @@ const divide = (a: number, b: number): TE.TaskEither<Error, number> =>
  */
 const planCommands = (
   instructions: readonly Instruction[]
-  // eslint-disable-next-line sonarjs/cognitive-complexity
 ): TE.TaskEither<Error, readonly ConcreteCommand[]> =>
   TE.right(
     instructions.map((instruction) => {
