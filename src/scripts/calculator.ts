@@ -52,29 +52,29 @@ type AdditionCommand = {
   readonly operation: '+';
   readonly undoOperation: '-';
   readonly value: number;
-  readonly execute: (a: number, b: number) => number;
-  readonly undo: (a: number, b: number) => number;
+  readonly execute: (a: number, b: number) => TE.TaskEither<Error, number>;
+  readonly undo: (a: number, b: number) => TE.TaskEither<Error, number>;
 };
 type SubtractionCommand = {
   readonly operation: '-';
   readonly undoOperation: '+';
   readonly value: number;
-  readonly execute: (a: number, b: number) => number;
-  readonly undo: (a: number, b: number) => number;
+  readonly execute: (a: number, b: number) => TE.TaskEither<Error, number>;
+  readonly undo: (a: number, b: number) => TE.TaskEither<Error, number>;
 };
 type MultiplicationCommand = {
   readonly operation: '*';
   readonly undoOperation: '/';
   readonly value: number;
-  readonly execute: (a: number, b: number) => number;
-  readonly undo: (a: number, b: number) => number;
+  readonly execute: (a: number, b: number) => TE.TaskEither<Error, number>;
+  readonly undo: (a: number, b: number) => TE.TaskEither<Error, number>;
 };
 type DivisionCommand = {
   readonly operation: '/';
   readonly undoOperation: '*';
   readonly value: number;
-  readonly execute: (a: number, b: number) => number;
-  readonly undo: (a: number, b: number) => number;
+  readonly execute: (a: number, b: number) => TE.TaskEither<Error, number>;
+  readonly undo: (a: number, b: number) => TE.TaskEither<Error, number>;
 };
 type Command =
   | AdditionCommand
@@ -82,11 +82,14 @@ type Command =
   | MultiplicationCommand
   | DivisionCommand;
 
-const add = (a: number, b: number): number => a + b;
-const subtract = (a: number, b: number): number => a - b;
-const multiply = (a: number, b: number): number => a * b;
-const divide = (a: number, b: number): number => a / b;
-
+const add = (a: number, b: number): TE.TaskEither<Error, number> =>
+  TE.right(a + b);
+const subtract = (a: number, b: number): TE.TaskEither<Error, number> =>
+  TE.right(a - b);
+const multiply = (a: number, b: number): TE.TaskEither<Error, number> =>
+  TE.right(a * b);
+const divide = (a: number, b: number): TE.TaskEither<Error, number> =>
+  b === 0 ? TE.left(new Error('Cannot divide by 0.')) : TE.right(a / b);
 /**
  * Plans the commands based on the instructions.
  * @param instructions - the instructions to plan.
@@ -95,22 +98,8 @@ const divide = (a: number, b: number): number => a / b;
 const planCommands = (
   instructions: readonly Instruction[]
   // eslint-disable-next-line sonarjs/cognitive-complexity
-): TE.TaskEither<Error, readonly Command[]> => {
-  const errors: readonly Error[] = instructions
-    .map((instruction, index) =>
-      instruction.operation === '/' && instruction.value === 0
-        ? new Error(`Error at instruction [${index}]: Cannot divide by 0.`)
-        : undefined
-    )
-    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-    .filter((maybeError): maybeError is Error => maybeError !== undefined);
-
-  // eslint-disable-next-line functional/no-conditional-statement
-  if (errors.length > 0) {
-    return TE.left(new Error(errors.join(' ')));
-  }
-
-  return TE.right(
+): TE.TaskEither<Error, readonly Command[]> =>
+  TE.right(
     instructions.map((instruction) => {
       // eslint-disable-next-line functional/no-conditional-statement
       switch (instruction.operation) {
@@ -153,7 +142,6 @@ const planCommands = (
       }
     })
   );
-};
 
 /**
  * Calculates the new value based on the current value and the command.
@@ -164,17 +152,14 @@ const planCommands = (
 const calculate = (
   currentValue: number,
   command: Command
-): TE.TaskEither<
-  Error,
-  { readonly newValue: number; readonly log: string }
-> => {
-  return TE.right({
-    newValue: command.execute(currentValue, command.value),
-    log: `${currentValue} ${command.operation} ${
-      command.value
-    } = ${command.execute(currentValue, command.value)}`,
-  });
-};
+): TE.TaskEither<Error, { readonly newValue: number; readonly log: string }> =>
+  pipe(
+    command.execute(currentValue, command.value),
+    TE.map((newValue) => ({
+      newValue,
+      log: `${currentValue} ${command.operation} ${command.value} = ${newValue}`,
+    }))
+  );
 
 /**
  * Calculates the undone value based on the current value and the command.
@@ -185,17 +170,14 @@ const calculate = (
 const undoCalculate = (
   currentValue: number,
   command: Command
-): TE.TaskEither<
-  Error,
-  { readonly newValue: number; readonly log: string }
-> => {
-  return TE.right({
-    newValue: command.undo(currentValue, command.value),
-    log: `${currentValue} ${command.undoOperation} ${
-      command.value
-    } = ${command.undo(currentValue, command.value)}`,
-  });
-};
+): TE.TaskEither<Error, { readonly newValue: number; readonly log: string }> =>
+  pipe(
+    command.undo(currentValue, command.value),
+    TE.map((newValue) => ({
+      newValue,
+      log: `${currentValue} ${command.undoOperation} ${command.value} = ${newValue}`,
+    }))
+  );
 
 /**
  * Prints out what would happen if the command was executed.
