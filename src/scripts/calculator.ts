@@ -6,20 +6,25 @@ import * as Console from 'fp-ts/lib/Console';
 // eslint-disable-next-line functional/no-let
 let currentValue = 0;
 // eslint-disable-next-line functional/no-let
-let history: readonly Command[] = [];
+let history: readonly ConcreteCommand[] = [];
 // eslint-disable-next-line functional/functional-parameters
-const fetchHistory = (): TE.TaskEither<Error, readonly Command[]> =>
-  TE.right(history);
+const fetchCommandHistory = (): TE.TaskEither<
+  Error,
+  readonly ConcreteCommand[]
+> => TE.right(history);
 
-const addNewCommand = (
-  command: Command
-): TE.TaskEither<Error, readonly Command[]> => {
+const addNewCommandToCommandHistory = (
+  command: ConcreteCommand
+): TE.TaskEither<Error, readonly ConcreteCommand[]> => {
   // eslint-disable-next-line functional/no-expression-statement
   history = [...history, command];
   return TE.right(history);
 };
 // eslint-disable-next-line functional/functional-parameters
-const removeLastCommand = (): TE.TaskEither<Error, readonly Command[]> => {
+const removeLastCommandFromCommandHistory = (): TE.TaskEither<
+  Error,
+  readonly ConcreteCommand[]
+> => {
   // eslint-disable-next-line functional/no-expression-statement
   history = history.slice(0, -1);
   return TE.right(history);
@@ -31,52 +36,49 @@ const fetchCurrentValue = (): TE.TaskEither<Error, number> =>
 
 const updateCurrentValue = (
   value: number,
-  command?: Command | 'undo'
+  command?: ConcreteCommand | 'undo'
 ): TE.TaskEither<Error, number> => {
   // eslint-disable-next-line functional/no-expression-statement
   command === undefined
     ? TE.right([])
     : command === 'undo'
-    ? removeLastCommand()
-    : addNewCommand(command);
+    ? removeLastCommandFromCommandHistory()
+    : addNewCommandToCommandHistory(command);
   // eslint-disable-next-line functional/no-expression-statement
   currentValue = value;
   return TE.right(currentValue);
 };
-
 type Instruction = {
   readonly operation: '+' | '-' | '*' | '/';
   readonly value: number;
+};
+
+type Command = {
+  readonly execute: (a: number, b: number) => TE.TaskEither<Error, number>;
+  readonly undo: (a: number, b: number) => TE.TaskEither<Error, number>;
 };
 type AdditionCommand = {
   readonly operation: '+';
   readonly undoOperation: '-';
   readonly value: number;
-  readonly execute: (a: number, b: number) => TE.TaskEither<Error, number>;
-  readonly undo: (a: number, b: number) => TE.TaskEither<Error, number>;
-};
+} & Command;
 type SubtractionCommand = {
   readonly operation: '-';
   readonly undoOperation: '+';
   readonly value: number;
-  readonly execute: (a: number, b: number) => TE.TaskEither<Error, number>;
-  readonly undo: (a: number, b: number) => TE.TaskEither<Error, number>;
-};
+} & Command;
 type MultiplicationCommand = {
   readonly operation: '*';
   readonly undoOperation: '/';
   readonly value: number;
-  readonly execute: (a: number, b: number) => TE.TaskEither<Error, number>;
-  readonly undo: (a: number, b: number) => TE.TaskEither<Error, number>;
-};
+} & Command;
 type DivisionCommand = {
   readonly operation: '/';
   readonly undoOperation: '*';
   readonly value: number;
-  readonly execute: (a: number, b: number) => TE.TaskEither<Error, number>;
-  readonly undo: (a: number, b: number) => TE.TaskEither<Error, number>;
-};
-type Command =
+} & Command;
+
+type ConcreteCommand =
   | AdditionCommand
   | SubtractionCommand
   | MultiplicationCommand
@@ -90,6 +92,7 @@ const multiply = (a: number, b: number): TE.TaskEither<Error, number> =>
   TE.right(a * b);
 const divide = (a: number, b: number): TE.TaskEither<Error, number> =>
   b === 0 ? TE.left(new Error('Cannot divide by 0.')) : TE.right(a / b);
+
 /**
  * Plans the commands based on the instructions.
  * @param instructions - the instructions to plan.
@@ -98,7 +101,7 @@ const divide = (a: number, b: number): TE.TaskEither<Error, number> =>
 const planCommands = (
   instructions: readonly Instruction[]
   // eslint-disable-next-line sonarjs/cognitive-complexity
-): TE.TaskEither<Error, readonly Command[]> =>
+): TE.TaskEither<Error, readonly ConcreteCommand[]> =>
   TE.right(
     instructions.map((instruction) => {
       // eslint-disable-next-line functional/no-conditional-statement
@@ -151,7 +154,7 @@ const planCommands = (
  */
 const calculate = (
   currentValue: number,
-  command: Command
+  command: ConcreteCommand
 ): TE.TaskEither<Error, { readonly newValue: number; readonly log: string }> =>
   pipe(
     command.execute(currentValue, command.value),
@@ -169,7 +172,7 @@ const calculate = (
  */
 const undoCalculate = (
   currentValue: number,
-  command: Command
+  command: ConcreteCommand
 ): TE.TaskEither<Error, { readonly newValue: number; readonly log: string }> =>
   pipe(
     command.undo(currentValue, command.value),
@@ -187,7 +190,7 @@ const undoCalculate = (
  */
 const dryRun = (
   currentValue: number,
-  command: Command
+  command: ConcreteCommand
 ): TE.TaskEither<Error, number> =>
   pipe(
     calculate(currentValue, command),
@@ -201,7 +204,7 @@ const dryRun = (
  * @returns a TaskEither that resolves to the new value if the commands are valid, otherwise an error message.
  */
 const reportDryRun = (
-  commands: readonly Command[]
+  commands: readonly ConcreteCommand[]
 ): TE.TaskEither<Error, number> =>
   pipe(
     fetchCurrentValue(),
@@ -216,7 +219,7 @@ const reportDryRun = (
         );
       }, TE.right(currentValue));
     }),
-    TE.tapIO((finalValue) => Console.info(`New value will be [${finalValue}].`))
+    TE.tapIO((newValue) => Console.info(`New value will be [${newValue}].`))
   );
 
 /**
@@ -224,7 +227,9 @@ const reportDryRun = (
  * @param command - the command to execute.
  * @returns a TaskEither that resolves to the new value if the command is valid, otherwise an error message.
  */
-const executeCommand = (command: Command): TE.TaskEither<Error, number> =>
+const executeCommand = (
+  command: ConcreteCommand
+): TE.TaskEither<Error, number> =>
   pipe(
     fetchCurrentValue(),
     TE.chain((currentValue) => calculate(currentValue, command)),
@@ -238,7 +243,7 @@ const executeCommand = (command: Command): TE.TaskEither<Error, number> =>
  * @returns a TaskEither that resolves to the new value if the commands are valid, otherwise an error message.
  */
 const executeCommands = (
-  commands: readonly Command[]
+  commands: readonly ConcreteCommand[]
 ): TE.TaskEither<Error, number> =>
   pipe(
     fetchCurrentValue(),
@@ -261,8 +266,8 @@ const executeCommands = (
  * @returns the latest command
  */
 const getLatestCommand = (
-  commandHistory: readonly Command[]
-): TE.TaskEither<Error, Command> => {
+  commandHistory: readonly ConcreteCommand[]
+): TE.TaskEither<Error, ConcreteCommand> => {
   const latestCommand = [...commandHistory].reverse()[0];
   return latestCommand === undefined
     ? TE.left(new Error('No commands to undo.'))
@@ -275,10 +280,10 @@ const getLatestCommand = (
  * @returns a TaskEither that resolves to the current value and the command to undo, otherwise an error message.
  */
 const thenGetCurrentValue = (
-  command: Command
+  command: ConcreteCommand
 ): TE.TaskEither<
   Error,
-  { readonly currentValue: number; readonly command: Command }
+  { readonly currentValue: number; readonly command: ConcreteCommand }
 > =>
   pipe(
     fetchCurrentValue(),
@@ -297,9 +302,12 @@ const thenGetCurrentValue = (
  */
 const undoLastCommand = (dryRun: boolean): TE.TaskEither<Error, number> =>
   pipe(
-    fetchHistory(),
+    fetchCommandHistory(),
     TE.chain((commands) => getLatestCommand(commands)),
     TE.chain((command) => thenGetCurrentValue(command)),
+    TE.tapIO(({ currentValue }) =>
+      Console.info(`Current value is [${currentValue}].`)
+    ),
     TE.chain(({ currentValue, command }) =>
       undoCalculate(currentValue, command)
     ),
@@ -316,7 +324,7 @@ const undoLastCommand = (dryRun: boolean): TE.TaskEither<Error, number> =>
  * @returns a TaskEither that resolves to the new value if the commands are valid, otherwise an error message.
  */
 export const commandHandler = (
-  commands: readonly Command[],
+  commands: readonly ConcreteCommand[],
   dryRun: boolean
 ): TE.TaskEither<Error, number> =>
   pipe(
@@ -395,7 +403,7 @@ const caller = async (currentValue?: number) => {
         },
       ],
       planCommands,
-      TE.chain((commands) => commandHandler(commands, false))
+      TE.chain((commands) => commandHandler(commands, true))
     )();
     // eslint-disable-next-line functional/no-conditional-statement
     if (E.isLeft(result)) {
@@ -405,11 +413,11 @@ const caller = async (currentValue?: number) => {
 
     // eslint-disable-next-line functional/no-expression-statement
     console.info('\n');
-    const undoResult1 = await undoHandler(false)();
+    const undoLastCommand = await undoHandler(false)();
     // eslint-disable-next-line functional/no-conditional-statement
-    if (E.isLeft(undoResult1)) {
+    if (E.isLeft(undoLastCommand)) {
       // eslint-disable-next-line functional/no-throw-statement
-      throw undoResult1.left;
+      throw undoLastCommand.left;
     }
 
     // eslint-disable-next-line functional/no-expression-statement
