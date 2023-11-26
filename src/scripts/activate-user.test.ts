@@ -11,7 +11,11 @@ import {
   baseUserService,
   deactivatedUser,
 } from './__fixtures__/data-providers';
-import { activateUserInvoker } from './activate-user';
+import {
+  activateUser,
+  activateUserHandler,
+  dryRunActivateUser,
+} from './activate-user';
 
 describe('Activating users', () => {
   it.each([okta.UserStatus.DEPROVISIONED, okta.UserStatus.STAGED])(
@@ -29,22 +33,20 @@ describe('Activating users', () => {
       };
 
       // When we attempt to activate a user with status that isn't DEPROVISIONED or STAGED
-      const activateUserResult = await activateUserInvoker(
+      const activateUserResult = await activateUserHandler(
         userService,
         user.id,
-        false,
-        false
+        activateUser(userService, false)
       )();
 
       // Then we should have a left
       expect(activateUserResult).toEqualRight(user);
 
       // When we attempt to activate a user with status that isn't DEPROVISIONED or STAGED and send activation email
-      const activateUserAndSendEmailResult = await activateUserInvoker(
+      const activateUserAndSendEmailResult = await activateUserHandler(
         userService,
         user.id,
-        false,
-        false
+        activateUser(userService, true)
       )();
 
       // Then we should have a left
@@ -63,21 +65,19 @@ describe('Activating users', () => {
     };
 
     // When we attempt to activate the user in dry run mode
-    const activateUserResult = await activateUserInvoker(
+    const activateUserResult = await activateUserHandler(
       userService,
       deactivatedUser.id,
-      true,
-      false
+      dryRunActivateUser(false)
     )();
     // Then the activateUser function should not have been called
     expect(activateUserResult).toEqualRight(deactivatedUser);
 
     // When we attempt to activate the user and send activation email in dry run mode
-    const activateUserAndSendEmailResult = await activateUserInvoker(
+    const activateUserAndSendEmailResult = await activateUserHandler(
       userService,
       deactivatedUser.id,
-      true,
-      true
+      dryRunActivateUser(true)
     )();
     // Then the activateUser function should not have been called
     expect(activateUserAndSendEmailResult).toEqualRight(deactivatedUser);
@@ -94,22 +94,20 @@ describe('Activating users', () => {
     };
 
     // When we attempt to activate the user and the request fails
-    const activateUserResult = await activateUserInvoker(
+    const activateUserResult = await activateUserHandler(
       userService,
       deactivatedUser.id,
-      false,
-      false
+      activateUser(userService, false)
     )();
 
     // Then we should have a left
     expect(activateUserResult).toEqualLeft(new Error('expected error'));
 
     // When we attempt to activate the user and send activation email, but the request fails
-    const activateUserAndSendEmailResult = await activateUserInvoker(
+    const activateUserAndSendEmailResult = await activateUserHandler(
       userService,
       deactivatedUser.id,
-      false,
-      true
+      activateUser(userService, true)
     )();
 
     // Then we should have a left
@@ -128,11 +126,10 @@ describe('Activating users', () => {
     };
 
     // When we attempt to activate a non-existent user
-    const activateUserResult = await activateUserInvoker(
+    const activateUserResult = await activateUserHandler(
       userService,
       deactivatedUser.id,
-      false,
-      false
+      activateUser(userService, false)
     )();
     // Then we should have a left
     expect(activateUserResult).toEqualLeft(
@@ -140,11 +137,10 @@ describe('Activating users', () => {
     );
 
     // When we attempt to activate a non-existent user and send activation email
-    const activateUserSendEmailResult = await activateUserInvoker(
+    const activateUserSendEmailResult = await activateUserHandler(
       userService,
       deactivatedUser.id,
-      false,
-      true
+      activateUser(userService, true)
     )();
     // Then we should have a left
     expect(activateUserSendEmailResult).toEqualLeft(
@@ -193,6 +189,7 @@ describe('Activating users', () => {
     ],
   ])(
     'fails when attempting to activate a user with status %s',
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
     async (status, error) => {
       // Given a user with status status
       const user: User = {
@@ -206,22 +203,20 @@ describe('Activating users', () => {
       };
 
       // When we attempt to activate a user with status that isn't DEPROVISIONED or STAGED
-      const activateUserResult = await activateUserInvoker(
+      const activateUserResult = await activateUserHandler(
         userService,
         user.id,
-        false,
-        false
+        activateUser(userService, false)
       )();
 
       // Then we should have a left
       expect(activateUserResult).toEqualLeft(error);
 
       // When we attempt to activate a user with status that isn't DEPROVISIONED or STAGED and send activation email
-      const activateUserSendEmailResult = await activateUserInvoker(
+      const activateUserSendEmailResult = await activateUserHandler(
         userService,
         user.id,
-        false,
-        true
+        activateUser(userService, true)
       )();
 
       // Then we should have a left
@@ -239,21 +234,19 @@ describe('Activating users', () => {
     };
 
     // When we attempt to activate a user but retrieving the user fails
-    const activateUserResult = await activateUserInvoker(
+    const activateUserResult = await activateUserHandler(
       userService,
       deactivatedUser.id,
-      false,
-      false
+      activateUser(userService, false)
     )();
     // Then we should have a left
     expect(activateUserResult).toEqualLeft(new Error('expected error'));
 
     // When we attempt to activate a user and send activation email but retrieving the user fails
-    const activateUserAndSendEmailResult = await activateUserInvoker(
+    const activateUserAndSendEmailResult = await activateUserHandler(
       userService,
       deactivatedUser.id,
-      false,
-      true
+      activateUser(userService, true)
     )();
     // Then we should have a left
     expect(activateUserAndSendEmailResult).toEqualLeft(

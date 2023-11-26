@@ -109,7 +109,6 @@ export default (
       const result: E.Either<Error, string> = await pipe(
         await pingOktaServer(args.clientId, args.organisationUrl),
         TE.tapIO((message) => Console.info(message)),
-        // eslint-disable-next-line functional/functional-parameters
         TE.chain(
           // eslint-disable-next-line functional/functional-parameters
           () =>
@@ -122,7 +121,6 @@ export default (
           const underlyingError =
             error.cause instanceof Error ? error.cause : error;
           const apiError = oktaAPIError.safeParse(underlyingError);
-          // eslint-disable-next-line functional/no-expression-statement
           const underlyingErrorMessage = underlyingError.message;
           // eslint-disable-next-line functional/no-conditional-statement
           switch (true) {

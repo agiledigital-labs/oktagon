@@ -43,7 +43,6 @@ export const pingOktaServer = async (
   const rightResponse = response.right;
   // eslint-disable-next-line functional/no-conditional-statement
   if (rightResponse.status >= 500) {
-    // eslint-disable-next-line functional/no-conditional-statement
     return TE.left(
       new Error('Server error. Please wait and try again later.', {
         cause: rightResponse,
