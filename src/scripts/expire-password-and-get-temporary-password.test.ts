@@ -90,7 +90,7 @@ describe('Expiring the password for a user and getting a temporary password for 
     const userService: UserService = {
       ...baseUserService(),
       expirePasswordAndGetTemporaryPassword: jest.fn(() =>
-        TE.left('expected error')
+        TE.left(new Error('expected error'))
       ),
       getUser: () => TE.right(O.some(user)),
     };
@@ -103,7 +103,7 @@ describe('Expiring the password for a user and getting a temporary password for 
     )();
 
     // Then we should have a left
-    expect(result).toEqualLeft('expected error');
+    expect(result).toEqualLeft(new Error('expected error'));
     expect(
       userService.expirePasswordAndGetTemporaryPassword
     ).toHaveBeenCalled();
@@ -112,15 +112,20 @@ describe('Expiring the password for a user and getting a temporary password for 
   it.each([
     [
       okta.UserStatus.SUSPENDED,
-      `User [user_id] [test@localhost] has status [${okta.UserStatus.SUSPENDED}]. Expiring a password is reserved for users with status: ACTIVE, STAGED, PROVISIONED, LOCKED_OUT, RECOVERY, or PASSWORD_EXPIRED.`,
+      new Error(
+        `Expiring a password is reserved for users with status: ACTIVE, STAGED, PROVISIONED, LOCKED_OUT, RECOVERY, or PASSWORD_EXPIRED. User [user_id] [test@localhost] has status [${okta.UserStatus.SUSPENDED}].`
+      ),
     ],
     [
       okta.UserStatus.DEPROVISIONED,
-      `User [user_id] [test@localhost] has status [${okta.UserStatus.DEPROVISIONED}]. Expiring a password is reserved for users with status: ACTIVE, STAGED, PROVISIONED, LOCKED_OUT, RECOVERY, or PASSWORD_EXPIRED.`,
+      new Error(
+        `Expiring a password is reserved for users with status: ACTIVE, STAGED, PROVISIONED, LOCKED_OUT, RECOVERY, or PASSWORD_EXPIRED. User [user_id] [test@localhost] has status [${okta.UserStatus.DEPROVISIONED}].`
+      ),
     ],
   ])(
     'fails when attempting to expire password of a user with status %s',
-    async (status, errorMessage) => {
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+    async (status, error) => {
       // Given a user with status status
       const userService: UserService = {
         ...baseUserService(),
@@ -138,7 +143,7 @@ describe('Expiring the password for a user and getting a temporary password for 
       )();
 
       // Then we should have a left
-      expect(result).toEqualLeft(errorMessage);
+      expect(result).toEqualLeft(error);
       expect(
         userService.expirePasswordAndGetTemporaryPassword
       ).not.toHaveBeenCalled();
@@ -164,7 +169,7 @@ describe('Expiring the password for a user and getting a temporary password for 
 
     // Then we should have a left
     expect(result).toEqualLeft(
-      'User [user_id] does not exist. Can not expire password.'
+      new Error('User [user_id] does not exist. Can not expire password.')
     );
     expect(
       userService.expirePasswordAndGetTemporaryPassword
@@ -178,7 +183,7 @@ describe('Expiring the password for a user and getting a temporary password for 
       expirePasswordAndGetTemporaryPassword: jest.fn(() =>
         TE.right({ user, temporaryPassword: 'temporaryPassword' })
       ),
-      getUser: () => TE.left('expected error'),
+      getUser: () => TE.left(new Error('expected error')),
     };
 
     // When we attempt to expire the password for a user and get a temporary password but retrieving the user fails
@@ -189,7 +194,7 @@ describe('Expiring the password for a user and getting a temporary password for 
     )();
 
     // Then we should have a left
-    expect(result).toEqualLeft('expected error');
+    expect(result).toEqualLeft(new Error('expected error'));
 
     // And we also expect the user service's expirePasswordAndGetTemporaryPassword to not have been called
     expect(

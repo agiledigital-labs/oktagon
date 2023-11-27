@@ -45,7 +45,9 @@ describe('Deleting users without using force', () => {
 
     // Then we should have a left
     expect(result).toEqualLeft(
-      'User [user_id] has not been deprovisioned. Deprovision before deleting.'
+      new Error(
+        'User [user_id] has not been deprovisioned. Deprovision before deleting.'
+      )
     );
 
     // And we also expect delete/decativate user to have never been called
@@ -97,7 +99,7 @@ describe('Deleting a user with force', () => {
     const userService: UserService = {
       ...baseUserService(),
       deleteUser: jest.fn(() => TE.right(user)),
-      deactivateUser: () => TE.left('expected error'),
+      deactivateUser: () => TE.left(new Error('expected error')),
       getUser: () => TE.right(O.some(user)),
     };
 
@@ -105,7 +107,7 @@ describe('Deleting a user with force', () => {
     const result = await deleteUser(userService, user.id, true)();
 
     // Then we should have a left
-    expect(result).toEqualLeft('expected error');
+    expect(result).toEqualLeft(new Error('expected error'));
 
     // And we also expect the user service's deleteUser to not have been called
     expect(userService.deleteUser).not.toHaveBeenCalled();
@@ -123,7 +125,7 @@ describe.each([
       // Given that getUser works, but deleteUser does not
       const userService: UserService = {
         ...baseUserService(),
-        deleteUser: () => TE.left('expected error'),
+        deleteUser: () => TE.left(new Error('expected error')),
         getUser: () => TE.right(O.some(deactivatedUser)),
       };
 
@@ -131,7 +133,7 @@ describe.each([
       const result = await deleteUser(userService, deactivatedUser.id, force)();
 
       // Then we should have a left
-      expect(result).toEqualLeft('expected error');
+      expect(result).toEqualLeft(new Error('expected error'));
     });
 
     it('fails when attempting to delete a non-existent user, %s', async () => {
@@ -146,7 +148,7 @@ describe.each([
       const result = await deleteUser(userService, user.id, force)();
       // Then we should have a left
       expect(result).toEqualLeft(
-        'User [user_id] does not exist. Can not delete.'
+        new Error('User [user_id] does not exist. Can not delete.')
       );
 
       // And we also expect the user service's deleteUser to not have been called
@@ -158,14 +160,14 @@ describe.each([
       const userService: UserService = {
         ...baseUserService(),
         deleteUser: jest.fn(() => TE.right(user)),
-        getUser: () => TE.left('expected error'),
+        getUser: () => TE.left(new Error('expected error')),
       };
 
       // When we attempt to delete an existing user both with and without force
       const result = await deleteUser(userService, user.id, force)();
 
       // Then we should have a left
-      expect(result).toEqualLeft('expected error');
+      expect(result).toEqualLeft(new Error('expected error'));
 
       // And we also expect the user service's deleteUser to not have been called
       expect(userService.deleteUser).not.toHaveBeenCalled();

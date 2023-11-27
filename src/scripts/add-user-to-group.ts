@@ -28,7 +28,7 @@ export const addUserToGroup = (
   groupService: GroupService,
   user: string,
   group: string
-): TE.TaskEither<string, string> =>
+): TE.TaskEither<Error, string> =>
   pipe(
     Ap.sequenceT(TE.ApplyPar)(
       userService.getUser(user),
@@ -43,7 +43,10 @@ export const addUserToGroup = (
         ),
         E.mapLeft(
           // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          (errors) => `${errors.join('. ')}. Can not add user to group.`
+          (errors) =>
+            new Error('Can not add user to group.', {
+              cause: errors.join(' '),
+            })
         )
       )
     ),
@@ -104,7 +107,7 @@ export default (
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {
         // eslint-disable-next-line functional/no-throw-statement
-        throw new Error(result.left);
+        throw result.left;
       }
     }
   );

@@ -46,7 +46,7 @@ export class OktaGroupService {
    */
   readonly getGroup = (
     groupId: string
-  ): TE.TaskEither<string, O.Option<Group>> =>
+  ): TE.TaskEither<Error, O.Option<Group>> =>
     TE.tryCatch(
       () =>
         // eslint-disable-next-line functional/no-this-expression
@@ -61,15 +61,15 @@ export class OktaGroupService {
               : Promise.reject(error);
           }),
       (error: unknown) =>
-        `Failed fetching group details for [${groupId}] because of [${JSON.stringify(
-          error
-        )}]`
+        new Error(`Failed fetching group details for [${groupId}].`, {
+          cause: error,
+        })
     );
 
   readonly addUserToGroup = (
     userId: string,
     groupId: string
-  ): TE.TaskEither<string, string> =>
+  ): TE.TaskEither<Error, string> =>
     pipe(
       TE.tryCatch(
         () =>
@@ -77,24 +77,28 @@ export class OktaGroupService {
           this.client
             .getUser(userId)
             // eslint-disable-next-line
-          .then((user: okta.User) => user.addToGroup(groupId)),
+            .then((user: okta.User) => user.addToGroup(groupId)),
         (error: unknown) =>
-          `Failed to add user [${userId}] to group [${groupId}] because of [${JSON.stringify(
-            error
-          )}].`
+          new Error(`Failed to add user [${userId}] to group [${groupId}].`, {
+            cause: error,
+          })
       ),
       // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
       TE.chain((response) =>
         response.ok
           ? TE.right(`Added user [${userId}] to group [${groupId}].`)
-          : TE.left(`Something went wrong. [${JSON.stringify(response)}]`)
+          : TE.left(
+              new Error('Something went wrong.', {
+                cause: response,
+              })
+            )
       )
     );
 
   readonly removeUserFromGroup = (
     userId: string,
     groupId: string
-  ): TE.TaskEither<string, string> =>
+  ): TE.TaskEither<Error, string> =>
     pipe(
       TE.tryCatch(
         () =>
@@ -104,20 +108,27 @@ export class OktaGroupService {
             // eslint-disable-next-line
             .then((group: okta.Group) => group.removeUser(userId)),
         (error: unknown) =>
-          `Failed to remove user [${userId}] to group [${groupId}] because of [${JSON.stringify(
-            error
-          )}].`
+          new Error(
+            `Failed to remove user [${userId}] to group [${groupId}].`,
+            {
+              cause: error,
+            }
+          )
       ),
       // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
       TE.chain((response) =>
         response.ok
           ? TE.right(`Removed user [${userId}] from group [${groupId}].`)
-          : TE.left(`Something went wrong. [${JSON.stringify(response)}]`)
+          : TE.left(
+              new Error('Something went wrong.', {
+                cause: response,
+              })
+            )
       )
     );
 
   // eslint-disable-next-line functional/functional-parameters
-  readonly listGroups = (): TE.TaskEither<string, readonly Group[]> => {
+  readonly listGroups = (): TE.TaskEither<Error, readonly Group[]> => {
     // We need to populate groups with all of the client data so it can be
     // returned. Okta's listGroups() function returns a custom collection that
     // does not allow for any form of mapping, so array mutation is needed.
@@ -143,7 +154,9 @@ export class OktaGroupService {
         );
       },
       (error: unknown) =>
-        `Failed to list groups because of [${JSON.stringify(error)}].`
+        new Error('Failed to list groups.', {
+          cause: error,
+        })
     );
   };
 }

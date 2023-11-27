@@ -8,8 +8,10 @@ import { addUserToGroup } from './add-user-to-group';
 import { GroupService } from './services/group-service';
 
 import * as test from './__fixtures__/data-providers';
+import { Left } from 'fp-ts/lib/Either';
 
 describe('Adding a user to a group', () => {
+  const errorMessage = 'Can not add user to group.';
   it('passes when calling addUserToGroup with an existing user and group', async () => {
     // Given a user service can retrieve a user.
     const userService: UserService = {
@@ -64,8 +66,10 @@ describe('Adding a user to a group', () => {
     )();
 
     // Then the request should have failed because the user does not exist
-    expect(result).toEqualLeft(
-      'User [userId] does not exist. Can not add user to group.'
+    expect(result).toEqualLeft(new Error(errorMessage));
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    expect((result as Left<Error>).left.cause).toEqual(
+      'User [userId] does not exist.'
     );
 
     // And no attempt was made to add the user to the group.
@@ -76,7 +80,7 @@ describe('Adding a user to a group', () => {
     // Given a user service that fails when finding the user.
     const userService = {
       ...test.baseUserService(),
-      getUser: () => TE.left('failed to get user'),
+      getUser: () => TE.left(new Error('failed to get user')),
     };
 
     // And a group service that can find the group.
@@ -94,7 +98,7 @@ describe('Adding a user to a group', () => {
     )();
 
     // Then the request should have failed because the call to get the user failed.
-    expect(result).toEqualLeft('failed to get user');
+    expect(result).toEqualLeft(new Error('failed to get user'));
 
     // And no attempt was made to add the user to the group.
     expect(groupService.addUserToGroup).not.toHaveBeenCalled();
@@ -122,8 +126,10 @@ describe('Adding a user to a group', () => {
     )();
 
     // Then the request should have failed because the group does not exist
-    expect(result).toEqualLeft(
-      'Group [groupId] does not exist. Can not add user to group.'
+    expect(result).toEqualLeft(new Error(errorMessage));
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    expect((result as Left<Error>).left.cause).toEqual(
+      'Group [groupId] does not exist.'
     );
 
     // And no attempt was made to add the user to the group.
@@ -140,7 +146,7 @@ describe('Adding a user to a group', () => {
     // And a group service fails when finding the gruop.
     const groupService = {
       ...test.baseGroupService(),
-      getGroup: () => TE.left('failed to get group'),
+      getGroup: () => TE.left(new Error('failed to get group')),
     };
 
     // When the user is added to the group
@@ -152,7 +158,7 @@ describe('Adding a user to a group', () => {
     )();
 
     // Then the request should have failed because the call to get the group failed.
-    expect(result).toEqualLeft('failed to get group');
+    expect(result).toEqualLeft(new Error('failed to get group'));
 
     // And no attempt was made to add the user to the group.
     expect(groupService.addUserToGroup).not.toHaveBeenCalled();
@@ -180,8 +186,10 @@ describe('Adding a user to a group', () => {
     )();
 
     // Then the request should have failed because the group does not exist
-    expect(result).toEqualLeft(
-      'Group [groupId] does not exist. User [userId] does not exist. Can not add user to group.'
+    expect(result).toEqualLeft(new Error(errorMessage));
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    expect((result as Left<Error>).left.cause).toEqual(
+      'Group [groupId] does not exist. User [userId] does not exist.'
     );
 
     // And no attempt was made to add the user to the group.
@@ -199,7 +207,9 @@ describe('Adding a user to a group', () => {
     const groupService = {
       ...test.baseGroupService(),
       getGroup: () => TE.right(O.some(test.group)),
-      addUserToGroup: jest.fn(() => TE.left('failed to add user to group')),
+      addUserToGroup: jest.fn(() =>
+        TE.left(new Error('failed to add user to group'))
+      ),
     };
 
     // When the user is added to the group
@@ -211,7 +221,7 @@ describe('Adding a user to a group', () => {
     )();
 
     // Then the request should have failed with the error from the group service.
-    expect(result).toEqualLeft('failed to add user to group');
+    expect(result).toEqualLeft(new Error('failed to add user to group'));
 
     // But an attempt was made to add the user to the group.
     expect(groupService.addUserToGroup).toBeCalledWith(

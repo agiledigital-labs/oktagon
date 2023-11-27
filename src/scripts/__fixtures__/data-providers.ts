@@ -4,7 +4,9 @@ import { User, UserService } from '../services/user-service';
 import { Group, GroupService } from '../services/group-service';
 import { UserStatus } from '@okta/okta-sdk-nodejs';
 
-export const returnLeftTE = jest.fn(() => TE.left('An error occurred'));
+export const returnLeftTE = jest.fn(() =>
+  TE.left(new Error('An error occurred'))
+);
 
 export const user: User = {
   id: 'user_id',
