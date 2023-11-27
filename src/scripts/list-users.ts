@@ -15,8 +15,11 @@ import {
   GroupService,
   Group,
 } from './services/group-service';
-import { pingOktaServer } from './ping-okta-server';
-import { oktaAPIError } from '../schema';
+import {
+  validateOktaServerIsRunning,
+  validateCredentials,
+} from './ping-okta-server';
+
 /**
  * Tabulates user information for display.
  * @param users users to be tabulated.
@@ -103,12 +106,13 @@ export default (
       );
       const userService = new OktaUserService(client);
       const groupService = new OktaGroupService(client);
+      const { clientId, organisationUrl } = args;
 
       // eslint-disable-next-line functional/no-expression-statement
       Console.info(args.groupId);
       const result: E.Either<Error, string> = await pipe(
-        await pingOktaServer(args.clientId, args.organisationUrl),
-        TE.tapIO((message) => Console.info(message)),
+        validateOktaServerIsRunning(clientId, organisationUrl),
+        TE.tapIO(Console.info),
         TE.chain(
           // eslint-disable-next-line functional/functional-parameters
           () =>
@@ -116,39 +120,7 @@ export default (
               ? users(userService)
               : usersInGroup(userService, groupService, args.groupId)
         ),
-        // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-        TE.mapLeft((error) => {
-          const underlyingError =
-            error.cause instanceof Error ? error.cause : error;
-          const apiError = oktaAPIError.safeParse(underlyingError);
-          const underlyingErrorMessage = underlyingError.message;
-          // eslint-disable-next-line functional/no-conditional-statement
-          switch (true) {
-            case apiError.success &&
-              apiError.data.status >= 400 &&
-              apiError.data.status < 500:
-            case underlyingErrorMessage.startsWith(
-              'Unable to convert private key from PEM to JWK:'
-            ):
-            case underlyingErrorMessage.startsWith('Key type') &&
-              underlyingErrorMessage.endsWith('is not supported.'):
-            case underlyingErrorMessage ===
-              'The first argument must be of type string or an instance of Buffer, ArrayBuffer, or Array or an Array-like Object. Received undefined':
-            case underlyingErrorMessage ===
-              'Key type undefined is not supported.':
-            case underlyingErrorMessage ===
-              'error:0180006C:bignum routines::no inverse':
-            case underlyingErrorMessage ===
-              'error:1E08010C:DECODER routines::unsupported': {
-              return new Error('Failed to decode the private key.', {
-                cause: underlyingError,
-              });
-            }
-            default: {
-              return underlyingError;
-            }
-          }
-        })
+        validateCredentials
       )();
 
       // eslint-disable-next-line functional/no-conditional-statement
