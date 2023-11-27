@@ -5,11 +5,11 @@ import * as Console from 'fp-ts/lib/Console';
 import { pipe } from 'fp-ts/lib/function';
 import { Argv } from 'yargs';
 import { oktaAPIError } from '../schema';
-import { oktaReadOnlyClient } from './services/client-service';
-import { OktaUserService, UserService } from './services/user-service';
+import {
+  oktaReadOnlyClient,
+  validateCredentials,
+} from './services/client-service';
 import { pingOktaServer } from './services/validation-service';
-
-export const callListUsers = (service: UserService) => service.listUsers();
 
 /**
  * Pings the okta server to see if it is up and running.
@@ -33,7 +33,7 @@ export const validateOktaServerIsRunning = (
         }: {
           readonly organisationUrl: string;
           readonly clientId: string;
-        }) => pingOktaServer(organisationUrl, clientId)
+        }) => pingOktaServer(clientId, organisationUrl)
       )(TE.right({ organisationUrl, clientId }))
     ),
     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
@@ -70,11 +70,11 @@ export const validateOktaServerIsRunning = (
   );
 
 /**
- * Validates the credentials of a service.
+ * Maps errors relating to credentials to a more specific error message.
  * @param result - the result of a service
  * @returns the result of the service if it was successful, otherwise a refined error in consideration to credentials.
  */
-export const validateCredentials = <T>(
+export const mapCredentialErrors = <T>(
   result: TE.TaskEither<Error, T>
 ): TE.TaskEither<Error, T> =>
   pipe(
@@ -134,15 +134,14 @@ export default (
       readonly organisationUrl: string;
     }) => {
       const client = oktaReadOnlyClient({ ...args });
-      const userService = new OktaUserService(client);
 
       const { clientId, organisationUrl } = args;
       const result = await pipe(
         validateOktaServerIsRunning(clientId, organisationUrl),
         TE.tapIO(Console.info),
         // eslint-disable-next-line functional/functional-parameters
-        TE.chain(() => callListUsers(userService)),
-        validateCredentials
+        TE.chain(() => validateCredentials(client)),
+        mapCredentialErrors
       )();
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {

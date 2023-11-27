@@ -17,7 +17,7 @@ import {
 } from './services/group-service';
 import {
   validateOktaServerIsRunning,
-  validateCredentials,
+  mapCredentialErrors,
 } from './ping-okta-server';
 
 /**
@@ -120,7 +120,7 @@ export default (
               ? users(userService)
               : usersInGroup(userService, groupService, args.groupId)
         ),
-        validateCredentials
+        mapCredentialErrors
       )();
 
       // eslint-disable-next-line functional/no-conditional-statement
