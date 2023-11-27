@@ -4,12 +4,8 @@ import { RootCommand } from '..';
 import * as Console from 'fp-ts/lib/Console';
 import { pipe } from 'fp-ts/lib/function';
 import { Argv } from 'yargs';
-import { oktaAPIError } from '../schema';
-import {
-  oktaReadOnlyClient,
-  validateCredentials,
-} from './services/client-service';
-import { pingOktaServer } from './services/validation-service';
+import { oktaReadOnlyClient } from './services/client-service';
+import { pingOktaServer, validateCredentials } from './services/okta-service';
 
 /**
  * Pings the okta server to see if it is up and running.
@@ -69,50 +65,6 @@ export const validateOktaServerIsRunning = (
     })
   );
 
-/**
- * Maps errors relating to credentials to a more specific error message.
- * @param result - the result of a service
- * @returns the result of the service if it was successful, otherwise a refined error in consideration to credentials.
- */
-export const mapCredentialErrors = <T>(
-  result: TE.TaskEither<Error, T>
-): TE.TaskEither<Error, T> =>
-  pipe(
-    result,
-    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-    TE.mapLeft((error) => {
-      const underlyingError =
-        error.cause instanceof Error ? error.cause : error;
-      const apiError = oktaAPIError.safeParse(underlyingError);
-      const underlyingErrorMessage = underlyingError.message;
-      // eslint-disable-next-line functional/no-conditional-statement
-      switch (true) {
-        case apiError.success &&
-          apiError.data.status >= 400 &&
-          apiError.data.status < 500:
-        case underlyingErrorMessage.startsWith(
-          'Unable to convert private key from PEM to JWK:'
-        ):
-        case underlyingErrorMessage.startsWith('Key type') &&
-          underlyingErrorMessage.endsWith('is not supported.'):
-        case underlyingErrorMessage ===
-          'The first argument must be of type string or an instance of Buffer, ArrayBuffer, or Array or an Array-like Object. Received undefined':
-        case underlyingErrorMessage === 'Key type undefined is not supported.':
-        case underlyingErrorMessage ===
-          'error:0180006C:bignum routines::no inverse':
-        case underlyingErrorMessage ===
-          'error:1E08010C:DECODER routines::unsupported': {
-          return new Error('Failed to decode the private key.', {
-            cause: underlyingError,
-          });
-        }
-        default: {
-          return underlyingError;
-        }
-      }
-    })
-  );
-
 export default (
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   rootCommand: RootCommand
@@ -140,8 +92,7 @@ export default (
         validateOktaServerIsRunning(clientId, organisationUrl),
         TE.tapIO(Console.info),
         // eslint-disable-next-line functional/functional-parameters
-        TE.chain(() => validateCredentials(client)),
-        mapCredentialErrors
+        TE.chain(() => validateCredentials(client))
       )();
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {

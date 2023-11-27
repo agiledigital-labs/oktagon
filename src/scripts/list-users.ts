@@ -15,10 +15,6 @@ import {
   GroupService,
   Group,
 } from './services/group-service';
-import {
-  validateOktaServerIsRunning,
-  mapCredentialErrors,
-} from './ping-okta-server';
 
 /**
  * Tabulates user information for display.
@@ -106,22 +102,12 @@ export default (
       );
       const userService = new OktaUserService(client);
       const groupService = new OktaGroupService(client);
-      const { clientId, organisationUrl } = args;
 
       // eslint-disable-next-line functional/no-expression-statement
       Console.info(args.groupId);
-      const result: E.Either<Error, string> = await pipe(
-        validateOktaServerIsRunning(clientId, organisationUrl),
-        TE.tapIO(Console.info),
-        TE.chain(
-          // eslint-disable-next-line functional/functional-parameters
-          () =>
-            args.groupId === undefined
-              ? users(userService)
-              : usersInGroup(userService, groupService, args.groupId)
-        ),
-        mapCredentialErrors
-      )();
+      const result: E.Either<Error, string> = await (args.groupId === undefined
+        ? users(userService)
+        : usersInGroup(userService, groupService, args.groupId))();
 
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {

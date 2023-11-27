@@ -1,7 +1,4 @@
 import * as okta from '@okta/okta-sdk-nodejs';
-import { TokenEndpointResponse } from '@okta/okta-sdk-nodejs/src/types/oauth';
-import * as TE from 'fp-ts/lib/TaskEither';
-import { pipe } from 'fp-ts/lib/function';
 
 /**
  * Configuration required to create an Okta client.
@@ -46,23 +43,3 @@ export const oktaManageClient = (
     authorizationMode: 'PrivateKey',
     scopes: scopes.map((scope) => 'okta.' + scope + '.manage'),
   });
-
-/**
- * Validates the credentials provided to the tool.
- * @param client - the Okta client to use to validate the credentials.
- * @returns a TaskEither that resolves to the token endpoint response if the credentials are valid, otherwise an error.
- */
-export const validateCredentials = (
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-  client: okta.Client
-): TE.TaskEither<Error, TokenEndpointResponse> => {
-  return pipe(
-    TE.tryCatch(
-      () => client.oauth.getAccessToken(),
-      (error) =>
-        new Error('Failed to get access token', {
-          cause: error,
-        })
-    )
-  );
-};
