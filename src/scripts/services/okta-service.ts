@@ -1,7 +1,7 @@
 import * as okta from '@okta/okta-sdk-nodejs';
 import * as TE from 'fp-ts/lib/TaskEither';
 import { pipe } from 'fp-ts/lib/function';
-import fetch, { Response } from 'node-fetch';
+import fetch from 'node-fetch';
 import { oktaAPIError } from '../../schema';
 
 /**
@@ -18,7 +18,7 @@ export const validateCredentials = (
     TE.tryCatch(
       () => client.oauth.getAccessToken(),
       (error) =>
-        new Error('Failed to get access token', {
+        new Error('Failed to get access token.', {
           cause: error,
         })
     ),
@@ -42,7 +42,6 @@ export const validateCredentials = (
           underlyingErrorMessage.endsWith('is not supported.'):
         case underlyingErrorMessage ===
           'The first argument must be of type string or an instance of Buffer, ArrayBuffer, or Array or an Array-like Object. Received undefined':
-        case underlyingErrorMessage === 'Key type undefined is not supported.':
         case underlyingErrorMessage ===
           'error:0180006C:bignum routines::no inverse':
         case underlyingErrorMessage ===
@@ -68,20 +67,53 @@ export const validateCredentials = (
 export const pingOktaServer = (
   clientId: string,
   organisationUrl: string
-): TE.TaskEither<Error, Response> =>
-  TE.tryCatch(
-    async () => {
-      return await fetch(
-        `${organisationUrl}/oauth2/default/.well-known/oauth-authorization-server?client_id=${clientId}`
-      );
-    },
-    (error: unknown) => {
-      // eslint-disable-next-line functional/no-conditional-statement
-      if (error instanceof Error) {
-        return error;
+): TE.TaskEither<Error, 'Okta server is up and running.'> =>
+  pipe(
+    TE.tryCatch(
+      async () => {
+        return await fetch(
+          `${organisationUrl}/oauth2/default/.well-known/oauth-authorization-server?client_id=${clientId}`
+        );
+      },
+      (error: unknown) => {
+        // eslint-disable-next-line functional/no-conditional-statement
+        if (error instanceof Error) {
+          return error;
+        }
+        return new Error('Failed to ping okta server.', {
+          cause: error,
+        });
       }
-      return new Error('Failed to ping okta server.', {
-        cause: error,
-      });
-    }
+    ),
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+    TE.chain((response) => {
+      // eslint-disable-next-line functional/no-conditional-statement
+      if (response.status >= 500 && response.status < 600) {
+        return TE.left(
+          new Error('Server error. Please wait and try again later.', {
+            cause: response,
+          })
+        );
+      }
+      // eslint-disable-next-line functional/no-conditional-statement
+      if (response.status >= 400 && response.status < 500) {
+        return TE.left(
+          new Error(
+            'Client error. Please check your client id and the URL of your organisation.',
+            {
+              cause: response,
+            }
+          )
+        );
+      }
+      // eslint-disable-next-line functional/no-conditional-statement
+      if (response.status >= 200 && response.status < 300) {
+        return TE.right('Okta server is up and running.');
+      }
+      return TE.left(
+        new Error('Unexpected response from pinging okta server.', {
+          cause: response,
+        })
+      );
+    })
   );

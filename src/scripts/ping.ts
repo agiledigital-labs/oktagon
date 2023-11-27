@@ -6,9 +6,10 @@ import { pipe } from 'fp-ts/lib/function';
 import { Argv } from 'yargs';
 import { oktaReadOnlyClient } from './services/client-service';
 import { pingOktaServer, validateCredentials } from './services/okta-service';
+import * as okta from '@okta/okta-sdk-nodejs';
 
 /**
- * Pings the okta server to see if it is up and running.
+ * Validates that the okta server is up and running.
  * @param clientId - the client id of the okta application.
  * @param organisationUrl - the url of the okta organisation.
  * @returns a TaskEither that resolves to a string if the okta server is up and running, otherwise an error message.
@@ -31,38 +32,27 @@ export const validateOktaServerIsRunning = (
           readonly clientId: string;
         }) => pingOktaServer(clientId, organisationUrl)
       )(TE.right({ organisationUrl, clientId }))
-    ),
-    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-    TE.chain((response) => {
-      // eslint-disable-next-line functional/no-conditional-statement
-      if (response.status >= 500) {
-        return TE.left(
-          new Error('Server error. Please wait and try again later.', {
-            cause: response,
-          })
-        );
-      }
-      // eslint-disable-next-line functional/no-conditional-statement
-      if (response.status >= 400 && response.status < 500) {
-        return TE.left(
-          new Error(
-            `Client error. Please check your client id [${clientId}] and the URL of your organisation [${organisationUrl}].`,
-            {
-              cause: response,
-            }
-          )
-        );
-      }
-      // eslint-disable-next-line functional/no-conditional-statement
-      if (response.status >= 200 && response.status < 300) {
-        return TE.right('Okta server is up and running.');
-      }
-      return TE.left(
-        new Error('Unexpected response from pinging okta server.', {
-          cause: response,
-        })
-      );
-    })
+    )
+  );
+
+/**
+ * Validates that the okta server is up and running and that the credentials are valid.
+ * @param client - the okta client
+ * @param clientId - the client id of the okta application.
+ * @param organisationUrl - the url of the okta organisation.
+ * @returns a TaskEither that resolves to a string if the okta server is up and running, otherwise an error message.
+ */
+export const validateOktaServerAndCredentials = (
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+  client: okta.Client,
+  clientId: string,
+  organisationUrl: string
+) =>
+  pipe(
+    validateOktaServerIsRunning(clientId, organisationUrl),
+    TE.tapIO(Console.info),
+    // eslint-disable-next-line functional/functional-parameters
+    TE.chain(() => validateCredentials(client))
   );
 
 export default (
@@ -88,11 +78,10 @@ export default (
       const client = oktaReadOnlyClient({ ...args });
 
       const { clientId, organisationUrl } = args;
-      const result = await pipe(
-        validateOktaServerIsRunning(clientId, organisationUrl),
-        TE.tapIO(Console.info),
-        // eslint-disable-next-line functional/functional-parameters
-        TE.chain(() => validateCredentials(client))
+      const result = await validateOktaServerAndCredentials(
+        client,
+        clientId,
+        organisationUrl
       )();
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {
