@@ -21,6 +21,17 @@ const parseUrl = (url: string): TE.TaskEither<Error, string> => {
 };
 
 /**
+ * Parses a url to check whether it is valid and then runs a function if it is.
+ * @param url - the url to parse
+ * @param func - the function to run if the url is valid
+ * @returns a TaskEither that resolves to the result of the function if the url is valid, otherwise an error.
+ */
+export const parseUrlWrapper = <T>(
+  url: string,
+  func: (url: string) => TE.TaskEither<Error, T>
+): TE.TaskEither<Error, T> => pipe(parseUrl(url), TE.chain(func));
+
+/**
  * Validates the credentials provided to the tool.
  * @param client - the Okta client to use to validate the credentials.
  * @returns a TaskEither that resolves to true if the credentials are valid, otherwise an error.
@@ -81,22 +92,19 @@ export const validateCredentials = (
  */
 export const pingOktaServer = (
   clientId: string,
-  url: string
+  organisationUrl: string
 ): TE.TaskEither<Error, 'Okta server is up and running.'> =>
   pipe(
-    parseUrl(url),
-    TE.chain((organisationUrl) =>
-      TE.tryCatch(
-        async () => {
-          return await fetch(
-            `${organisationUrl}/oauth2/default/.well-known/oauth-authorization-server?client_id=${clientId}`
-          );
-        },
-        (error: unknown) =>
-          new Error('Failed to ping okta server.', {
-            cause: error,
-          })
-      )
+    TE.tryCatch(
+      async () => {
+        return await fetch(
+          `${organisationUrl}/oauth2/default/.well-known/oauth-authorization-server?client_id=${clientId}`
+        );
+      },
+      (error: unknown) =>
+        new Error('Failed to ping okta server.', {
+          cause: error,
+        })
     ),
     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
     TE.chain((response) => {
@@ -112,7 +120,7 @@ export const pingOktaServer = (
       if (response.status >= 400 && response.status < 500) {
         return TE.left(
           new Error(
-            `Client error. Please check your client id [${clientId}] and the URL of your organisation [${url}].`,
+            `Client error. Please check your client id [${clientId}] and the URL of your organisation [${organisationUrl}].`,
             {
               cause: response,
             }

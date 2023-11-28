@@ -8,6 +8,7 @@ import * as E from 'fp-ts/lib/Either';
 import * as O from 'fp-ts/lib/Option';
 import { flow, pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
+import { parseUrlWrapper } from './services/okta-service';
 
 const deactivateUser = (
   service: UserService,
@@ -60,10 +61,16 @@ export default (
       readonly organisationUrl: string;
       readonly userId: string;
     }) => {
-      const client = oktaManageClient({ ...args });
-      const service = new OktaUserService(client);
-
-      const result = await deactivateUser(service, args.userId)();
+      const { organisationUrl, userId } = args;
+      const result = await parseUrlWrapper(organisationUrl, (url: string) =>
+        pipe(
+          TE.right(oktaManageClient({ ...args, organisationUrl: url })),
+          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+          TE.chain((client) => TE.right(new OktaUserService(client))),
+          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+          TE.chain((service) => deactivateUser(service, userId))
+        )
+      )();
 
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {

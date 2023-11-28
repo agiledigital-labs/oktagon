@@ -10,6 +10,7 @@ import * as E from 'fp-ts/lib/Either';
 import * as O from 'fp-ts/lib/Option';
 import { flow, pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
+import { parseUrlWrapper } from './services/okta-service';
 
 const createUser = (
   service: UserService,
@@ -89,24 +90,29 @@ export default (
       readonly firstName: string;
       readonly lastName: string;
     }) => {
-      const password = String(
-        generate({
-          length: 10,
-          numbers: true,
-          symbols: true,
-          strict: true,
-        })
-      );
-
-      const client = oktaManageClient({ ...args });
-      const service = new OktaUserService(client);
-
-      const result = await createUser(
-        service,
-        password,
-        args.email,
-        args.firstName,
-        args.lastName
+      const { organisationUrl, email, firstName, lastName } = args;
+      const result = await parseUrlWrapper(organisationUrl, (url: string) =>
+        pipe(
+          TE.right(oktaManageClient({ ...args, organisationUrl: url })),
+          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+          TE.chain((client) =>
+            TE.right({
+              service: new OktaUserService(client),
+              password: String(
+                generate({
+                  length: 10,
+                  numbers: true,
+                  symbols: true,
+                  strict: true,
+                })
+              ),
+            })
+          ),
+          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+          TE.chain(({ service, password }) =>
+            createUser(service, password, email, firstName, lastName)
+          )
+        )
       )();
 
       // eslint-disable-next-line functional/no-conditional-statement

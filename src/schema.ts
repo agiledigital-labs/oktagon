@@ -8,9 +8,9 @@ const urlEnd = '.okta.com';
 export const urlSchema = z
   .string()
   .url()
-  .startsWith('https://', `URL must start with [${urlStart}].`)
+  .startsWith(urlStart, `URL must start with [${urlStart}].`)
   //.co will cause fetch to time out
-  .endsWith('.okta.com', `URL must end with [${urlEnd}].`)
+  .endsWith(urlEnd, `URL must end with [${urlEnd}].`)
   .min(
     urlStart.length + urlEnd.length + 1,
     'Domain name must be at least 1 character long.'
