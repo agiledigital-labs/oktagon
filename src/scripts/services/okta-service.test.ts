@@ -23,12 +23,6 @@ describe('Parsing url', () => {
           validation: { startsWith: 'https://' },
         },
         {
-          code: 'invalid_string',
-          message: 'URL must end with [.okta.com].',
-          path: [],
-          validation: { endsWith: '.okta.com' },
-        },
-        {
           code: 'too_small',
           exact: false,
           inclusive: true,
@@ -36,6 +30,11 @@ describe('Parsing url', () => {
           minimum: 18,
           path: [],
           type: 'string',
+        },
+        {
+          code: 'custom',
+          message: 'URL must end with [.okta.com].',
+          path: [],
         },
       ],
     ],
