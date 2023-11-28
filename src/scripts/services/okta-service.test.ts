@@ -6,6 +6,14 @@ import { parseUrl } from './okta-service';
 
 /* eslint-disable functional/functional-parameters */
 describe('Parsing url', () => {
+  it.each(['https://example.okta.com', 'https://example.okta.com/'])(
+    'should return a right when the url is valid',
+    async (url) => {
+      const result = await parseUrl(url)();
+      expect(result).toEqualRight(url);
+    }
+  );
+
   it.each([
     [
       '',
