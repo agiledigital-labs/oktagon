@@ -7,7 +7,6 @@ import * as E from 'fp-ts/lib/Either';
 import { pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
 import * as okta from '@okta/okta-sdk-nodejs';
-import { parseUrlWrapper } from './services/okta-service';
 
 /**
  * User that can have their password expired.
@@ -184,21 +183,13 @@ export default (
       readonly userId: string;
       readonly dryRun: boolean;
     }) => {
-      const { organisationUrl, userId, dryRun } = args;
-      const result = await parseUrlWrapper(organisationUrl, (url: string) =>
-        pipe(
-          TE.right(oktaManageClient({ ...args, organisationUrl: url })),
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          TE.chain((client) => TE.right(new OktaUserService(client))),
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          TE.chain((service) =>
-            expirePasswordAndGetTemporaryPasswordHandler(
-              service,
-              userId,
-              dryRun
-            )
-          )
-        )
+      const client = oktaManageClient({ ...args });
+      const service = new OktaUserService(client);
+      const { userId, dryRun } = args;
+      const result = await expirePasswordAndGetTemporaryPasswordHandler(
+        service,
+        userId,
+        dryRun
       )();
 
       // eslint-disable-next-line functional/no-conditional-statement

@@ -2,8 +2,7 @@
 /* eslint-disable functional/no-expression-statement */
 
 import { Left } from 'fp-ts/lib/Either';
-import { parseUrlWrapper } from './okta-service';
-import * as TE from 'fp-ts/lib/TaskEither';
+import { parseUrl } from './okta-service';
 
 /* eslint-disable functional/functional-parameters */
 describe('Parsing url', () => {
@@ -55,7 +54,7 @@ describe('Parsing url', () => {
     'should return a left when the url is invalid',
     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
     async (url, issues) => {
-      const result = await parseUrlWrapper(url, (url) => TE.right(url))();
+      const result = await parseUrl(url)();
       expect(result).toEqualLeft(
         new Error(`Client error. Invalid URL [${url}].`)
       );

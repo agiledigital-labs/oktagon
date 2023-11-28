@@ -8,7 +8,6 @@ import * as E from 'fp-ts/lib/Either';
 import * as O from 'fp-ts/lib/Option';
 import { flow, pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
-import { parseUrlWrapper } from './services/okta-service';
 
 /**
  * Deletes a user belonging to an Okta organisation/client
@@ -85,16 +84,10 @@ export default (
       readonly userId: string;
       readonly force: boolean;
     }) => {
-      const { organisationUrl, userId, force } = args;
-      const result = await parseUrlWrapper(organisationUrl, (url: string) =>
-        pipe(
-          TE.right(oktaManageClient({ ...args, organisationUrl: url })),
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          TE.chain((client) => TE.right(new OktaUserService(client))),
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          TE.chain((service) => deleteUser(service, userId, force))
-        )
-      )();
+      const client = oktaManageClient({ ...args });
+      const service = new OktaUserService(client);
+
+      const result = await deleteUser(service, args.userId, args.force)();
 
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {

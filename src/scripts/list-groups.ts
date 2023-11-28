@@ -13,7 +13,6 @@ import * as TE from 'fp-ts/lib/TaskEither';
 import * as E from 'fp-ts/lib/Either';
 import { pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
-import { parseUrlWrapper } from './services/okta-service';
 
 /**
  * Tabulates group information for display.
@@ -61,18 +60,10 @@ export default (
       readonly privateKey: string;
       readonly organisationUrl: string;
     }) => {
-      const { organisationUrl } = args;
-      const result = await parseUrlWrapper(organisationUrl, (url: string) =>
-        pipe(
-          TE.right(
-            oktaReadOnlyClient({ ...args, organisationUrl: url }, ['groups'])
-          ),
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          TE.chain((client) => TE.right(new OktaGroupService(client))),
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          TE.chain((service) => groups(service))
-        )
-      )();
+      const client = oktaReadOnlyClient({ ...args }, ['groups']);
+      const service = new OktaGroupService(client);
+
+      const result = await groups(service)();
 
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {

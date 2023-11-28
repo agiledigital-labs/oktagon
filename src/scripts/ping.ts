@@ -5,11 +5,7 @@ import * as Console from 'fp-ts/lib/Console';
 import { pipe } from 'fp-ts/lib/function';
 import { Argv } from 'yargs';
 import { oktaReadOnlyClient } from './services/client-service';
-import {
-  parseUrlWrapper,
-  pingOktaServer,
-  validateCredentials,
-} from './services/okta-service';
+import { pingOktaServer, validateCredentials } from './services/okta-service';
 import * as okta from '@okta/okta-sdk-nodejs';
 
 /**
@@ -79,20 +75,14 @@ export default (
       readonly privateKey: string;
       readonly organisationUrl: string;
     }) => {
-      const { organisationUrl, clientId } = args;
-      const result = await parseUrlWrapper(organisationUrl, (url: string) =>
-        pipe(
-          TE.right({
-            client: oktaReadOnlyClient({ ...args, organisationUrl: url }),
-            url: organisationUrl,
-          }),
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          TE.chain(({ client, url }) =>
-            validateOktaServerAndCredentials(client, clientId, url)
-          )
-        )
-      )();
+      const client = oktaReadOnlyClient({ ...args });
 
+      const { clientId, organisationUrl } = args;
+      const result = await validateOktaServerAndCredentials(
+        client,
+        clientId,
+        organisationUrl
+      )();
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {
         // eslint-disable-next-line functional/no-throw-statement

@@ -9,7 +9,7 @@ import { oktaAPIErrorSchema, urlSchema } from '../../schema';
  * @param url - the url to parse
  * @returns a TaskEither that resolves to the url if it is valid, otherwise an error.
  */
-const parseUrl = (url: string): TE.TaskEither<Error, string> => {
+export const parseUrl = (url: string): TE.TaskEither<Error, string> => {
   const parsedURL = urlSchema.safeParse(url);
   return parsedURL.success
     ? TE.right(parsedURL.data)
@@ -19,17 +19,6 @@ const parseUrl = (url: string): TE.TaskEither<Error, string> => {
         })
       );
 };
-
-/**
- * Parses a url to check whether it is valid and then runs a function if it is.
- * @param url - the url to parse
- * @param func - the function to run if the url is valid
- * @returns a TaskEither that resolves to the result of the function if the url is valid, otherwise an error.
- */
-export const parseUrlWrapper = <T>(
-  url: string,
-  func: (url: string) => TE.TaskEither<Error, T>
-): TE.TaskEither<Error, T> => pipe(parseUrl(url), TE.chain(func));
 
 /**
  * Validates the credentials provided to the tool.

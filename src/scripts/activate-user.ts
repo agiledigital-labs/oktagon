@@ -7,7 +7,6 @@ import * as TE from 'fp-ts/lib/TaskEither';
 import * as E from 'fp-ts/lib/Either';
 import { pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
-import { parseUrlWrapper } from './services/okta-service';
 
 /**
  * User that can be activated.
@@ -221,26 +220,18 @@ export default (
       readonly dryRun: boolean;
       readonly sendEmail: boolean;
     }) => {
-      const { userId, dryRun, sendEmail, organisationUrl } = args;
-      const result = await parseUrlWrapper(organisationUrl, (url: string) =>
-        pipe(
-          TE.right(oktaManageClient({ ...args, organisationUrl: url })),
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          TE.chain((client) => TE.right(new OktaUserService(client))),
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          TE.chain((service) =>
-            TE.right({
-              service,
-              commandHandler: dryRun
-                ? dryRunActivateUser(sendEmail)
-                : activateUser(service, sendEmail),
-            })
-          ),
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          TE.chain(({ service, commandHandler }) =>
-            activateUserHandler(service, userId, commandHandler)
-          )
-        )
+      const client = oktaManageClient({ ...args });
+      const service = new OktaUserService(client);
+      const { userId, dryRun, sendEmail } = args;
+      const commandHandler: (
+        user: ActivatableUser
+      ) => TE.TaskEither<Error, User> = dryRun
+        ? dryRunActivateUser(sendEmail)
+        : activateUser(service, sendEmail);
+      const result = await activateUserHandler(
+        service,
+        userId,
+        commandHandler
       )();
 
       // eslint-disable-next-line functional/no-conditional-statement

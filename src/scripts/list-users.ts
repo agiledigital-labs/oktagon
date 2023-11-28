@@ -15,7 +15,6 @@ import {
   GroupService,
   Group,
 } from './services/group-service';
-import { parseUrlWrapper } from './services/okta-service';
 
 /**
  * Tabulates user information for display.
@@ -97,34 +96,18 @@ export default (
       readonly organisationUrl: string;
       readonly groupId?: string;
     }) => {
-      const { organisationUrl, groupId } = args;
-      const result = await parseUrlWrapper(organisationUrl, (url: string) =>
-        pipe(
-          TE.right(
-            oktaReadOnlyClient(
-              { ...args, organisationUrl: url },
-              args.groupId === undefined ? ['users'] : ['groups']
-            )
-          ),
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          TE.chain((client) =>
-            TE.right({
-              userService: new OktaUserService(client),
-              groupService: new OktaGroupService(client),
-            })
-          ),
-          // eslint-disable-next-line functional/functional-parameters
-          TE.tapIO(() =>
-            Console.info(`Group id is [${groupId ?? 'undefined'}]`)
-          ),
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          TE.chain(({ userService, groupService }) =>
-            groupId === undefined
-              ? users(userService)
-              : usersInGroup(userService, groupService, groupId)
-          )
-        )
-      )();
+      const client = oktaReadOnlyClient(
+        { ...args },
+        args.groupId === undefined ? ['users'] : ['groups']
+      );
+      const userService = new OktaUserService(client);
+      const groupService = new OktaGroupService(client);
+
+      // eslint-disable-next-line functional/no-expression-statement
+      Console.info(args.groupId);
+      const result: E.Either<Error, string> = await (args.groupId === undefined
+        ? users(userService)
+        : usersInGroup(userService, groupService, args.groupId))();
 
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {

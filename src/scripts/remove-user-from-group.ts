@@ -14,7 +14,6 @@ import { pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
 import * as A from 'fp-ts/lib/Apply';
 import * as NEA from 'fp-ts/NonEmptyArray';
-import { parseUrlWrapper } from './services/okta-service';
 
 const applicativeValidation = E.getApplicativeValidation(
   NEA.getSemigroup<string>()
@@ -99,28 +98,15 @@ export default (
       readonly user: string;
       readonly group: string;
     }) => {
-      const { organisationUrl, user, group } = args;
-      const result = await parseUrlWrapper(organisationUrl, (url: string) =>
-        pipe(
-          TE.right(
-            oktaManageClient({ ...args, organisationUrl: url }, [
-              'users',
-              'groups',
-            ])
-          ),
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          TE.chain((client) =>
-            TE.right({
-              userService: new OktaUserService(client),
-              groupService: new OktaGroupService(client),
-            })
-          ),
+      const client = oktaManageClient({ ...args }, ['users', 'groups']);
+      const userService = new OktaUserService(client);
+      const groupService = new OktaGroupService(client);
 
-          // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-          TE.chain(({ userService, groupService }) =>
-            removeUserFromGroup(userService, groupService, user, group)
-          )
-        )
+      const result = await removeUserFromGroup(
+        userService,
+        groupService,
+        args.user,
+        args.group
       )();
 
       // eslint-disable-next-line functional/no-conditional-statement
