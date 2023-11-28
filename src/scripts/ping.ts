@@ -67,7 +67,7 @@ export default (
   rootCommand.command(
     'ping',
     // eslint-disable-next-line quotes
-    "Pings the okta server to see if it's running and check user credentials",
+    "Pings the okta server to see if it's running and check user credentials along with organisation url",
     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => yargs.argv,
     async (args: {

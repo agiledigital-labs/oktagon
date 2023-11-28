@@ -2,9 +2,24 @@ import * as okta from '@okta/okta-sdk-nodejs';
 import * as TE from 'fp-ts/lib/TaskEither';
 import { pipe } from 'fp-ts/lib/function';
 import fetch from 'node-fetch';
-import { oktaAPIError } from '../../schema';
+import { oktaAPIErrorSchema, urlSchema } from '../../schema';
 
 /**
+ * Parses a url to check whether it is valid
+ * @param url - the url to parse
+ * @returns a TaskEither that resolves to the url if it is valid, otherwise an error.
+ */
+export const parseUrl = (url: string): TE.TaskEither<Error, string> => {
+  const parsedURL = urlSchema.safeParse(url);
+  return parsedURL.success
+    ? TE.right(parsedURL.data)
+    : TE.left(
+        new Error(`Client error. Invalid URL [${url}].`, {
+          cause: parsedURL.error.issues,
+        })
+      );
+};
+
 /**
  * Validates the credentials provided to the tool.
  * @param client - the Okta client to use to validate the credentials.
@@ -28,7 +43,7 @@ export const validateCredentials = (
     TE.mapLeft((error) => {
       const underlyingError =
         error.cause instanceof Error ? error.cause : error;
-      const apiError = oktaAPIError.safeParse(underlyingError);
+      const apiError = oktaAPIErrorSchema.safeParse(underlyingError);
       const underlyingErrorMessage = underlyingError.message;
       // eslint-disable-next-line functional/no-conditional-statement
       switch (true) {
@@ -46,7 +61,7 @@ export const validateCredentials = (
           'error:0180006C:bignum routines::no inverse':
         case underlyingErrorMessage ===
           'error:1E08010C:DECODER routines::unsupported': {
-          return new Error('Failed to decode the private key.', {
+          return new Error('Client error. Please check your private key.', {
             cause: underlyingError,
           });
         }
@@ -75,15 +90,10 @@ export const pingOktaServer = (
           `${organisationUrl}/oauth2/default/.well-known/oauth-authorization-server?client_id=${clientId}`
         );
       },
-      (error: unknown) => {
-        // eslint-disable-next-line functional/no-conditional-statement
-        if (error instanceof Error) {
-          return error;
-        }
-        return new Error('Failed to ping okta server.', {
+      (error: unknown) =>
+        new Error('Failed to ping okta server.', {
           cause: error,
-        });
-      }
+        })
     ),
     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
     TE.chain((response) => {
@@ -99,7 +109,7 @@ export const pingOktaServer = (
       if (response.status >= 400 && response.status < 500) {
         return TE.left(
           new Error(
-            'Client error. Please check your client id and the URL of your organisation.',
+            `Client error. Please check your client id [${clientId}] and the URL of your organisation [${organisationUrl}].`,
             {
               cause: response,
             }

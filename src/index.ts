@@ -3,7 +3,10 @@
 import { readdirSync } from 'fs';
 import { join } from 'path';
 import yargs, { Argv } from 'yargs';
+import { parseUrl } from './scripts/services/okta-service';
+import * as E from 'fp-ts/lib/Either';
 
+const organisationURL = 'organisation-url';
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace NodeJS {
@@ -52,14 +55,24 @@ const rootCommand = yargs
     describe: 'Okta private key as string form of JSON',
     demandOption: true,
   })
-  .option('organisation-url', {
+  .option(organisationURL, {
     type: 'string',
     alias: ['org-url', 'ou'],
     describe: 'Okta URL for Organisation',
     demandOption: true,
   })
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+  .check(async (argv) => {
+    const result = await parseUrl(argv[organisationURL])();
+    // eslint-disable-next-line functional/no-conditional-statement
+    if (E.isLeft(result)) {
+      // eslint-disable-next-line functional/no-throw-statement
+      throw result.left;
+    }
+    return true;
+  })
   .group(
-    ['client-id', 'private-key', 'organisation-url'],
+    ['client-id', 'private-key', organisationURL],
     'Okta connection settings:'
   )
   .help();

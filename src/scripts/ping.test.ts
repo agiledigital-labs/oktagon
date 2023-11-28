@@ -43,16 +43,18 @@ describe('Pinging', () => {
     organisationUrl: 'organisation url',
     privateKey: '',
   });
+  const clientId = '123';
+  const urlTemplate = 'https://template.okta.com';
 
   it.each([200, 299])(
-    'should return a right when the okta server returns status [200-299] and credentials are correct',
+    'should return a right when the okta server returns status [200-299], and credentials along with organisation url  are correct',
     async (statusCode) => {
       mockFetchRequest.mockResolvedValue({ status: statusCode });
       mockOktaRequest.mockResolvedValue('resolved value');
       const result = await validateOktaServerAndCredentials(
         oktaClient,
-        '',
-        ''
+        clientId,
+        urlTemplate
       )();
       expect(result).toEqualRight(true);
       expect(mockFetchRequest).toHaveBeenCalledTimes(1);
@@ -66,8 +68,8 @@ describe('Pinging', () => {
       mockFetchRequest.mockResolvedValue({ status: statusCode });
       const result = await validateOktaServerAndCredentials(
         oktaClient,
-        '',
-        ''
+        clientId,
+        urlTemplate
       )();
       expect(result).toEqualLeft(
         new Error('Server error. Please wait and try again later.')
@@ -87,12 +89,12 @@ describe('Pinging', () => {
       mockFetchRequest.mockResolvedValue({ status: statusCode });
       const result = await validateOktaServerAndCredentials(
         oktaClient,
-        '',
-        ''
+        clientId,
+        urlTemplate
       )();
       expect(result).toEqualLeft(
         new Error(
-          'Client error. Please check your client id and the URL of your organisation.'
+          `Client error. Please check your client id [${clientId}] and the URL of your organisation [${urlTemplate}].`
         )
       );
       // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
@@ -110,8 +112,8 @@ describe('Pinging', () => {
       mockFetchRequest.mockResolvedValue({ status: statusCode });
       const result = await validateOktaServerAndCredentials(
         oktaClient,
-        '',
-        ''
+        clientId,
+        urlTemplate
       )();
       expect(result).toEqualLeft(
         new Error('Unexpected response from pinging okta server.')
@@ -127,7 +129,11 @@ describe('Pinging', () => {
 
   it('should return a left when the ping request fails', async () => {
     mockFetchRequest.mockRejectedValue('rejected value');
-    const result = await validateOktaServerAndCredentials(oktaClient, '', '')();
+    const result = await validateOktaServerAndCredentials(
+      oktaClient,
+      clientId,
+      urlTemplate
+    )();
     expect(result).toEqualLeft(new Error('Failed to ping okta server.'));
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
     expect((result as Left<Error>).left.cause).toEqual('rejected value');
@@ -152,11 +158,11 @@ describe('Pinging', () => {
       mockOktaRequest.mockRejectedValue(error);
       const result = await validateOktaServerAndCredentials(
         oktaClient,
-        '',
-        ''
+        clientId,
+        urlTemplate
       )();
       expect(result).toEqualLeft(
-        new Error('Failed to decode the private key.')
+        new Error('Client error. Please check your private key.')
       );
       // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
       expect((result as Left<Error>).left.cause).toEqual(error);
@@ -168,7 +174,11 @@ describe('Pinging', () => {
   it('should return a left when the okta server returns status [200-299] but credentials return an unknown error', async () => {
     mockFetchRequest.mockResolvedValue({ status: 200 });
     mockOktaRequest.mockRejectedValue('rejected value');
-    const result = await validateOktaServerAndCredentials(oktaClient, '', '')();
+    const result = await validateOktaServerAndCredentials(
+      oktaClient,
+      clientId,
+      urlTemplate
+    )();
     expect(result).toEqualLeft(new Error('Failed to get access token.'));
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
     expect((result as Left<Error>).left.cause).toEqual('rejected value');
