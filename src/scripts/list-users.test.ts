@@ -21,7 +21,7 @@ describe('Listing all users', () => {
     };
 
     // When we attempt to list the users from the client
-    const result = await users(userService)();
+    const result = await users(userService, false)();
 
     // Then we should have a right
     expect(result).toBeRight();
@@ -44,7 +44,7 @@ describe('Listing all users', () => {
     };
 
     // When we attempt to list the users from the client
-    const result = await users(userService)();
+    const result = await users(userService, false)();
 
     // Then we should have a left
     expect(result).toEqualLeft(new Error('expected error'));
@@ -71,7 +71,8 @@ describe('Listing users within groups', () => {
     const result = await usersInGroup(
       userService,
       groupService,
-      test.group.id
+      test.group.id,
+      false
     )();
 
     // Then we should have a right
@@ -108,7 +109,8 @@ describe('Listing users within groups', () => {
     const result = await usersInGroup(
       userService,
       groupService,
-      test.group.id
+      test.group.id,
+      false
     )();
 
     // Then we should have a left
@@ -137,7 +139,8 @@ describe('Listing users within groups', () => {
     const result = await usersInGroup(
       userService,
       groupService,
-      test.group.id
+      test.group.id,
+      false
     )();
 
     // Then we should have a left
@@ -166,7 +169,8 @@ describe('Listing users within groups', () => {
     const result = await usersInGroup(
       userService,
       groupService,
-      test.group.id
+      test.group.id,
+      false
     )();
 
     // Then we should have a left

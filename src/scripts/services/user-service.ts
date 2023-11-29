@@ -109,13 +109,15 @@ export class OktaUserService {
     );
   };
 
-  // eslint-disable-next-line functional/functional-parameters
-  readonly listUsers = (): TE.TaskEither<Error, readonly User[]> =>
+  readonly listUsers = (
+    listAll: boolean
+  ): TE.TaskEither<Error, readonly User[]> =>
     // eslint-disable-next-line functional/no-this-expression
-    this.privateListUsers(TE.right(this.client));
+    this.privateListUsers(TE.right(this.client), listAll);
 
   readonly listUsersInGroup = (
-    group: Group
+    group: Group,
+    listAll: boolean
   ): TE.TaskEither<Error, readonly User[]> =>
     pipe(
       group,
@@ -129,11 +131,19 @@ export class OktaUserService {
             })
         ),
       // eslint-disable-next-line functional/no-this-expression
-      this.privateListUsers
+      (group) => this.privateListUsers(group, listAll)
     );
 
+  /**
+   * Lists all users in a group or client.
+   * @param groupOrClient - Either a group or a client
+   * @param listAl - Whether to list all users or just non-deprovisioned users
+   * @link https://developer.okta.com/docs/reference/api/users/#list-all-users
+   * @returns a list of users
+   */
   readonly privateListUsers = (
-    groupOrClient: TE.TaskEither<Error, okta.Group | okta.Client>
+    groupOrClient: TE.TaskEither<Error, okta.Group | okta.Client>,
+    listAll: boolean
   ) =>
     // We need to populate users with all of the client data so it can be
     // returned. Okta's listUsers() function returns a custom collection that
@@ -146,7 +156,15 @@ export class OktaUserService {
           const users: User[] = [];
           return (
             maybeGroupOrClient
-              .listUsers()
+              .listUsers({
+                // Without this filter, Okta will only return non-deprovisioned users.
+                // link: https://developer.okta.com/docs/reference/api/users/#list-all-users
+                filter: listAll
+                  ? Object.keys(okta.UserStatus)
+                      .map((status) => `status eq "${status}"`)
+                      .join(' or ')
+                  : undefined,
+              })
               // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
               .each((oktaUser) => {
                 // eslint-disable-next-line functional/immutable-data
