@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { readonlyURL } from 'readonly-types';
 
 export const oktaAPIErrorSchema = z.object({
   status: z.number(),
@@ -19,6 +20,8 @@ export const urlSchema = z
   )
   .refine(
     //.co will cause fetch to time out
-    (url) => url.endsWith(urlEnd) || url.endsWith(`${urlEnd}/`),
+    (url) => {
+      return readonlyURL(url)?.hostname.endsWith(urlEnd);
+    },
     `URL must end with [${urlEnd}].`
   );
