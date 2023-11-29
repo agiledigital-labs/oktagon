@@ -134,6 +134,13 @@ export class OktaUserService {
       (group) => this.privateListUsers(group, listAll)
     );
 
+  /**
+   * Lists all users in a group or client.
+   * @param groupOrClient - Either a group or a client
+   * @param listAl - Whether to list all users or just non-deprovisioned users
+   * @link https://developer.okta.com/docs/reference/api/users/#list-all-users
+   * @returns a list of users
+   */
   readonly privateListUsers = (
     groupOrClient: TE.TaskEither<Error, okta.Group | okta.Client>,
     listAll: boolean
@@ -150,6 +157,8 @@ export class OktaUserService {
           return (
             maybeGroupOrClient
               .listUsers({
+                // Without this filter, Okta will only return non-deprovisioned users.
+                // link: https://developer.okta.com/docs/reference/api/users/#list-all-users
                 filter: listAll
                   ? Object.keys(okta.UserStatus)
                       .map((status) => `status eq "${status}"`)
