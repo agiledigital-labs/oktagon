@@ -3,6 +3,7 @@
 
 import { Left } from 'fp-ts/lib/Either';
 import { parseUrl } from './okta-service';
+import { readonlyURL } from 'readonly-types';
 
 /* eslint-disable functional/functional-parameters */
 describe('Parsing url', () => {
@@ -10,7 +11,7 @@ describe('Parsing url', () => {
     'should return a right when the url is valid',
     async (url) => {
       const result = await parseUrl(url)();
-      expect(result).toEqualRight(url);
+      expect(result).toEqualRight(readonlyURL(url));
     }
   );
 
@@ -19,29 +20,35 @@ describe('Parsing url', () => {
       '',
       [
         {
-          code: 'invalid_string',
-          message: 'Invalid url',
+          code: 'custom',
+          fatal: true,
+          message: 'Invalid URL. URL must start with [https://].',
           path: [],
-          validation: 'url',
         },
+      ],
+    ],
+    [
+      'https://',
+      [
         {
-          code: 'invalid_string',
-          message: 'URL must start with [https://].',
+          code: 'custom',
+          fatal: true,
+          message: 'Invalid URL.',
           path: [],
-          validation: { startsWith: 'https://' },
         },
-        {
-          code: 'too_small',
-          exact: false,
-          inclusive: true,
-          message: 'Domain name must be at least 1 character long.',
-          minimum: 18,
-          path: [],
-          type: 'string',
-        },
+      ],
+    ],
+    [
+      'https://.co',
+      [
         {
           code: 'custom',
           message: 'URL must end with [.okta.com].',
+          path: [],
+        },
+        {
+          code: 'custom',
+          message: 'Domain name must be at least 1 character long.',
           path: [],
         },
       ],

@@ -3,13 +3,14 @@ import * as TE from 'fp-ts/lib/TaskEither';
 import { pipe } from 'fp-ts/lib/function';
 import fetch from 'node-fetch';
 import { oktaAPIErrorSchema, urlSchema } from '../../schema';
+import { ReadonlyURL } from 'readonly-types';
 
 /**
  * Parses a url to check whether it is valid
  * @param url - the url to parse
  * @returns a TaskEither that resolves to the url if it is valid, otherwise an error.
  */
-export const parseUrl = (url: string): TE.TaskEither<Error, string> => {
+export const parseUrl = (url: string): TE.TaskEither<Error, ReadonlyURL> => {
   const parsedURL = urlSchema.safeParse(url);
   return parsedURL.success
     ? TE.right(parsedURL.data)
