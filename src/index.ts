@@ -1,10 +1,17 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
 /* eslint-disable functional/no-expression-statement */
-import { readdirSync } from 'fs';
-import { join } from 'path';
-import yargs, { Argv } from 'yargs';
+import yargs from 'yargs';
 import { parseUrl } from './scripts/services/okta-service';
 import * as E from 'fp-ts/lib/Either';
+import activateUser from './scripts/activate-user';
+import addUserToGroup from './scripts/add-user-to-group';
+import createUser from './scripts/create-user';
+import deactivateUser from './scripts/deactivate-user';
+import deleteUser from './scripts/delete-user';
+import expirePasswordAndGetTemporaryPassword from './scripts/expire-password-and-get-temporary-password';
+import listGroups from './scripts/list-groups';
+import listUsers from './scripts/list-users';
+import ping from './scripts/ping';
+import removeUserFromGroup from './scripts/remove-user-from-group';
 
 const organisationURL = 'organisation-url';
 declare global {
@@ -18,24 +25,11 @@ declare global {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-type DefaultFunction = (rootCommand: RootCommand) => Argv<unknown>;
-
 /**
  * Dynamic type for global arguments. This needs to be it's own as we use a
  * require below to import all the commands
  */
 export type RootCommand = typeof rootCommand;
-
-// Only finds scripts in top level
-const directorySearch = (localDirectory: string): readonly string[] =>
-  readdirSync(join(__dirname, localDirectory), { withFileTypes: true })
-    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-    .map(({ name }) => name)
-    .filter((value) => value.endsWith('.js'))
-    // Weirdness with string concat as path resolves the the ./ and drops it
-    // from the final string
-    .map((name) => `./${join(localDirectory, name)}`);
 
 /**
  * Add global arguments here using the .option function.
@@ -76,14 +70,16 @@ const rootCommand = yargs
   )
   .help();
 
-// Allows to configure handlers (any .js file in the scripts directory) with arguments (rootCommand in this case) at runtime.
-// This means the end users of this tool won't have to touch this file, they just have to add their scripts in the scripts folder.
-directorySearch('scripts').map((path) => {
-  const command = require<
-    { readonly default: DefaultFunction } | DefaultFunction
-  >(path);
-
-  return (typeof command === 'object' ? command.default : command)(rootCommand);
-});
+// End users of this tool will have to import their subcommands, and call it following example subcommand.
+activateUser(rootCommand);
+addUserToGroup(rootCommand);
+createUser(rootCommand);
+deactivateUser(rootCommand);
+deleteUser(rootCommand);
+expirePasswordAndGetTemporaryPassword(rootCommand);
+listGroups(rootCommand);
+listUsers(rootCommand);
+ping(rootCommand);
+removeUserFromGroup(rootCommand);
 
 void rootCommand.demandCommand().strict().help().argv;
