@@ -1,4 +1,5 @@
 import * as okta from '@okta/okta-sdk-nodejs';
+import { ReadonlyURL } from 'readonly-types';
 
 /**
  * Configuration required to create an Okta client.
@@ -9,7 +10,7 @@ export type OktaConfiguration = {
   /** JSON encoded private key for the application. */
   readonly privateKey: string;
   /** URL of the Okta organisation. */
-  readonly orgUrl: string;
+  readonly orgUrl: ReadonlyURL;
 };
 
 /**
@@ -24,6 +25,7 @@ export const oktaReadOnlyClient = (
 ) =>
   new okta.Client({
     ...oktaConfiguration,
+    orgUrl: oktaConfiguration.orgUrl.href,
     authorizationMode: 'PrivateKey',
     scopes: scopes.map((scope) => 'okta.' + scope + '.read'),
   });
@@ -40,6 +42,7 @@ export const oktaManageClient = (
 ): okta.Client =>
   new okta.Client({
     ...oktaConfiguration,
+    orgUrl: oktaConfiguration.orgUrl.href,
     authorizationMode: 'PrivateKey',
     scopes: scopes.map((scope) => 'okta.' + scope + '.manage'),
   });

@@ -5,6 +5,7 @@
 import { Left } from 'fp-ts/lib/Either';
 import { validateOktaServerAndCredentials } from './ping';
 import { oktaReadOnlyClient } from './services/client-service';
+import { readonlyURL } from 'readonly-types';
 
 const mockFetchRequest = jest.fn();
 const mockOktaRequest = jest.fn();
@@ -38,13 +39,15 @@ describe('Pinging', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
-  const oktaClient = oktaReadOnlyClient({
-    clientId: 'client id',
-    orgUrl: 'org url',
-    privateKey: '',
-  });
   const clientId = '123';
   const urlTemplate = 'https://template.okta.com';
+
+  const oktaClient = oktaReadOnlyClient({
+    clientId: 'client id',
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    orgUrl: readonlyURL(urlTemplate)!,
+    privateKey: '',
+  });
 
   it.each([200, 299])(
     'should return a right when the okta server returns status [200-299], and credentials along with organisation url  are correct',

@@ -225,7 +225,7 @@ export default (
       const client = oktaManageClient({
         clientId: args.clientId,
         privateKey: args.privateKey,
-        orgUrl: args.orgUrl.href,
+        orgUrl: args.orgUrl,
       });
       const service = new OktaUserService(client);
       const { userId, dryRun, sendEmail } = args;

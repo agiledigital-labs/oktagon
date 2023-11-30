@@ -99,7 +99,7 @@ export default (
         {
           clientId: args.clientId,
           privateKey: args.privateKey,
-          orgUrl: args.orgUrl.href,
+          orgUrl: args.orgUrl,
         },
         ['users', 'groups']
       );

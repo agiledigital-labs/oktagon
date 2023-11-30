@@ -81,7 +81,7 @@ export default (
       const client = oktaReadOnlyClient({
         clientId,
         privateKey,
-        orgUrl: orgUrl.href,
+        orgUrl: orgUrl,
       });
 
       const result = await validateOktaServerAndCredentials(
