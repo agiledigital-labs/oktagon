@@ -13,6 +13,7 @@ import * as TE from 'fp-ts/lib/TaskEither';
 import * as E from 'fp-ts/lib/Either';
 import { pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
+import { ReadonlyURL } from 'readonly-types';
 
 /**
  * Tabulates group information for display.
@@ -47,20 +48,28 @@ export default (
 ): Argv<{
   readonly clientId: string;
   readonly privateKey: string;
-  readonly organisationUrl: string;
+  readonly orgUrl: ReadonlyURL;
 }> =>
   rootCommand.command(
     'list-groups',
     // eslint-disable-next-line quotes
     "Provides a list of all groups' ID's, email addresses, display names, and statuses.",
-    // eslint-disable-next-line functional/no-return-void, functional/functional-parameters, @typescript-eslint/no-empty-function
-    () => {},
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+    (yargs) => yargs.argv,
+    // Note: do not use spread operator on args as it is not type safe
     async (args: {
       readonly clientId: string;
       readonly privateKey: string;
-      readonly organisationUrl: string;
+      readonly orgUrl: ReadonlyURL;
     }) => {
-      const client = oktaReadOnlyClient({ ...args }, ['groups']);
+      const client = oktaReadOnlyClient(
+        {
+          clientId: args.clientId,
+          privateKey: args.privateKey,
+          orgUrl: args.orgUrl.href,
+        },
+        ['groups']
+      );
       const service = new OktaGroupService(client);
 
       const result = await groups(service)();

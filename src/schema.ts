@@ -4,23 +4,12 @@ import { readonlyURL } from 'readonly-types';
 export const oktaAPIErrorSchema = z.object({
   status: z.number(),
 });
-const urlStart = 'https://';
+const urlProtocol = 'https:';
 const urlEnd = '.okta.com';
 export const urlSchema = z
   .string()
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   .transform((urlString, ctx) => {
-    // eslint-disable-next-line functional/no-conditional-statement
-    if (!urlString.startsWith(urlStart)) {
-      // eslint-disable-next-line functional/no-expression-statement
-      ctx.addIssue({
-        fatal: true,
-        code: z.ZodIssueCode.custom,
-        message: `Invalid URL. URL must start with [${urlStart}].`,
-      });
-      return z.NEVER;
-    }
-
     const parsedUrl = readonlyURL(urlString);
     // eslint-disable-next-line functional/no-conditional-statement
     if (parsedUrl === undefined) {
@@ -28,13 +17,17 @@ export const urlSchema = z
       ctx.addIssue({
         fatal: true,
         code: z.ZodIssueCode.custom,
-        message: 'Invalid URL.',
+        message: `Given input [${urlString}] could not be parsed to URL.`,
       });
       return z.NEVER;
     }
 
     return parsedUrl;
   })
+  .refine(
+    (url) => url.protocol === urlProtocol,
+    `URL protocol must be [${urlProtocol}].`
+  )
   .refine((url) => {
     return url.hostname.endsWith(urlEnd);
   }, `URL must end with [${urlEnd}].`)

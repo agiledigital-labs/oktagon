@@ -9,7 +9,7 @@ export type OktaConfiguration = {
   /** JSON encoded private key for the application. */
   readonly privateKey: string;
   /** URL of the Okta organisation. */
-  readonly organisationUrl: string;
+  readonly orgUrl: string;
 };
 
 /**

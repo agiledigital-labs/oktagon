@@ -40,7 +40,7 @@ describe('Pinging', () => {
   });
   const oktaClient = oktaReadOnlyClient({
     clientId: 'client id',
-    organisationUrl: 'organisation url',
+    orgUrl: 'org url',
     privateKey: '',
   });
   const clientId = '123';

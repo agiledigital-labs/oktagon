@@ -14,6 +14,7 @@ import { pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
 import * as Ap from 'fp-ts/lib/Apply';
 import * as NEA from 'fp-ts/NonEmptyArray';
+import { ReadonlyURL } from 'readonly-types';
 
 const applicativeValidation = E.getApplicativeValidation(
   NEA.getSemigroup<string>()
@@ -61,7 +62,7 @@ export default (
 ): Argv<{
   readonly clientId: string;
   readonly privateKey: string;
-  readonly organisationUrl: string;
+  readonly orgUrl: ReadonlyURL;
   readonly user: string;
   readonly group: string;
 }> =>
@@ -86,14 +87,22 @@ export default (
           demandOption: true,
         });
     },
+    // Note: do not use spread operator on args as it is not type safe
     async (args: {
       readonly clientId: string;
       readonly privateKey: string;
-      readonly organisationUrl: string;
+      readonly orgUrl: ReadonlyURL;
       readonly user: string;
       readonly group: string;
     }) => {
-      const client = oktaManageClient({ ...args }, ['users', 'groups']);
+      const client = oktaManageClient(
+        {
+          clientId: args.clientId,
+          privateKey: args.privateKey,
+          orgUrl: args.orgUrl.href,
+        },
+        ['users', 'groups']
+      );
       const userService = new OktaUserService(client);
       const groupService = new OktaGroupService(client);
 

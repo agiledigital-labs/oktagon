@@ -17,30 +17,24 @@ describe('Parsing url', () => {
 
   it.each([
     [
-      '',
+      '2',
       [
         {
           code: 'custom',
           fatal: true,
-          message: 'Invalid URL. URL must start with [https://].',
+          message: 'Given input [2] could not be parsed to URL.',
           path: [],
         },
       ],
     ],
     [
-      'https://',
+      'http://.co',
       [
         {
           code: 'custom',
-          fatal: true,
-          message: 'Invalid URL.',
+          message: 'URL protocol must be [https:].',
           path: [],
         },
-      ],
-    ],
-    [
-      'https://.co',
-      [
         {
           code: 'custom',
           message: 'URL must end with [.okta.com].',
