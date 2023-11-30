@@ -7,6 +7,7 @@ import * as E from 'fp-ts/lib/Either';
 import { pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
 import * as okta from '@okta/okta-sdk-nodejs';
+import { ReadonlyURL } from 'readonly-types';
 
 /**
  * User that can have their password expired.
@@ -152,7 +153,7 @@ export default (
 ): Argv<{
   readonly clientId: string;
   readonly privateKey: string;
-  readonly organisationUrl: string;
+  readonly orgUrl: ReadonlyURL;
   readonly userId: string;
   readonly dryRun: boolean;
 }> =>
@@ -179,11 +180,15 @@ export default (
     async (args: {
       readonly clientId: string;
       readonly privateKey: string;
-      readonly organisationUrl: string;
+      readonly orgUrl: ReadonlyURL;
       readonly userId: string;
       readonly dryRun: boolean;
     }) => {
-      const client = oktaManageClient({ ...args });
+      const client = oktaManageClient({
+        clientId: args.clientId,
+        privateKey: args.privateKey,
+        orgUrl: args.orgUrl,
+      });
       const service = new OktaUserService(client);
       const { userId, dryRun } = args;
       const result = await expirePasswordAndGetTemporaryPasswordHandler(

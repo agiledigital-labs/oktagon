@@ -60,16 +60,15 @@ const rootCommand = yargs
     alias: ['org-url', 'ou'],
     describe: 'Okta URL for Organisation',
     demandOption: true,
-  })
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-  .check(async (argv) => {
-    const result = await parseUrl(argv[organisationURL])();
-    // eslint-disable-next-line functional/no-conditional-statement
-    if (E.isLeft(result)) {
-      // eslint-disable-next-line functional/no-throw-statement
-      throw result.left;
-    }
-    return true;
+    coerce: async (url: string) => {
+      const result = await parseUrl(url)();
+      // eslint-disable-next-line functional/no-conditional-statement
+      if (E.isLeft(result)) {
+        // eslint-disable-next-line functional/no-throw-statement
+        throw result.left;
+      }
+      return result.right;
+    },
   })
   .group(
     ['client-id', 'private-key', organisationURL],

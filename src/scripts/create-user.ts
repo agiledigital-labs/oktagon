@@ -10,6 +10,7 @@ import * as E from 'fp-ts/lib/Either';
 import * as O from 'fp-ts/lib/Option';
 import { flow, pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
+import { ReadonlyURL } from 'readonly-types';
 
 const createUser = (
   service: UserService,
@@ -47,7 +48,7 @@ export default (
 ): Argv<{
   readonly clientId: string;
   readonly privateKey: string;
-  readonly organisationUrl: string;
+  readonly orgUrl: ReadonlyURL;
   readonly email: string;
   readonly firstName: string;
   readonly lastName: string;
@@ -84,7 +85,7 @@ export default (
     async (args: {
       readonly clientId: string;
       readonly privateKey: string;
-      readonly organisationUrl: string;
+      readonly orgUrl: ReadonlyURL;
       readonly email: string;
       readonly firstName: string;
       readonly lastName: string;
@@ -98,7 +99,11 @@ export default (
         })
       );
 
-      const client = oktaManageClient({ ...args });
+      const client = oktaManageClient({
+        clientId: args.clientId,
+        privateKey: args.privateKey,
+        orgUrl: args.orgUrl,
+      });
       const service = new OktaUserService(client);
 
       const result = await createUser(

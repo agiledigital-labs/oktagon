@@ -3,39 +3,47 @@
 
 import { Left } from 'fp-ts/lib/Either';
 import { parseUrl } from './okta-service';
+import { readonlyURL } from 'readonly-types';
 
 /* eslint-disable functional/functional-parameters */
 describe('Parsing url', () => {
+  it.each(['https://example.okta.com', 'https://example.okta.com/'])(
+    'should return a right when the url is valid',
+    async (url) => {
+      const result = await parseUrl(url)();
+      expect(result).toEqualRight(readonlyURL(url));
+    }
+  );
+
   it.each([
     [
-      '',
+      '2',
       [
         {
-          code: 'invalid_string',
-          message: 'Invalid url',
+          code: 'custom',
+          fatal: true,
+          message: 'Given input [2] could not be parsed to URL.',
           path: [],
-          validation: 'url',
+        },
+      ],
+    ],
+    [
+      'http://.co',
+      [
+        {
+          code: 'custom',
+          message: 'URL protocol must be [https:].',
+          path: [],
         },
         {
-          code: 'invalid_string',
-          message: 'URL must start with [https://].',
-          path: [],
-          validation: { startsWith: 'https://' },
-        },
-        {
-          code: 'invalid_string',
+          code: 'custom',
           message: 'URL must end with [.okta.com].',
           path: [],
-          validation: { endsWith: '.okta.com' },
         },
         {
-          code: 'too_small',
-          exact: false,
-          inclusive: true,
+          code: 'custom',
           message: 'Domain name must be at least 1 character long.',
-          minimum: 18,
           path: [],
-          type: 'string',
         },
       ],
     ],

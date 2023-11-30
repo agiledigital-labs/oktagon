@@ -7,6 +7,7 @@ import { Argv } from 'yargs';
 import { oktaReadOnlyClient } from './services/client-service';
 import { pingOktaServer, validateCredentials } from './services/okta-service';
 import * as okta from '@okta/okta-sdk-nodejs';
+import { ReadonlyURL } from 'readonly-types';
 
 /**
  * Validates that the okta server is up and running.
@@ -61,7 +62,7 @@ export default (
 ): Argv<{
   readonly clientId: string;
   readonly privateKey: string;
-  readonly organisationUrl: string;
+  readonly orgUrl: ReadonlyURL;
   readonly groupId?: string;
 }> =>
   rootCommand.command(
@@ -73,15 +74,19 @@ export default (
     async (args: {
       readonly clientId: string;
       readonly privateKey: string;
-      readonly organisationUrl: string;
+      readonly orgUrl: ReadonlyURL;
     }) => {
-      const client = oktaReadOnlyClient({ ...args });
+      const { clientId, orgUrl, privateKey } = args;
+      const client = oktaReadOnlyClient({
+        clientId,
+        privateKey,
+        orgUrl: orgUrl,
+      });
 
-      const { clientId, organisationUrl } = args;
       const result = await validateOktaServerAndCredentials(
         client,
         clientId,
-        organisationUrl
+        orgUrl.href
       )();
       // eslint-disable-next-line functional/no-conditional-statement
       if (E.isLeft(result)) {

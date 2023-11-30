@@ -16,6 +16,7 @@ import {
   GroupService,
   Group,
 } from './services/group-service';
+import { ReadonlyURL } from 'readonly-types';
 
 /**
  * Tabulates user information for display.
@@ -75,8 +76,8 @@ export default (
 ): Argv<{
   readonly clientId: string;
   readonly privateKey: string;
-  readonly organisationUrl: string;
   readonly all: boolean;
+  readonly orgUrl: ReadonlyURL;
   readonly groupId?: string;
 }> =>
   rootCommand.command(
@@ -103,14 +104,18 @@ export default (
     async (args: {
       readonly clientId: string;
       readonly privateKey: string;
-      readonly organisationUrl: string;
       readonly all: boolean;
+      readonly orgUrl: ReadonlyURL;
       readonly groupId?: string;
     }) => {
       const { groupId, all } = args;
       const client = oktaReadOnlyClient(
-        { ...args },
-        groupId === undefined ? ['users'] : ['groups']
+        {
+          clientId: args.clientId,
+          privateKey: args.privateKey,
+          orgUrl: args.orgUrl,
+        },
+        args.groupId === undefined ? ['users'] : ['groups']
       );
       const userService = new OktaUserService(client);
       const groupService = new OktaGroupService(client);

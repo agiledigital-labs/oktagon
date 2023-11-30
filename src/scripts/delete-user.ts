@@ -8,6 +8,7 @@ import * as E from 'fp-ts/lib/Either';
 import * as O from 'fp-ts/lib/Option';
 import { flow, pipe } from 'fp-ts/lib/function';
 import * as Console from 'fp-ts/lib/Console';
+import { ReadonlyURL } from 'readonly-types';
 
 /**
  * Deletes a user belonging to an Okta organisation/client
@@ -58,7 +59,7 @@ export default (
 ): Argv<{
   readonly clientId: string;
   readonly privateKey: string;
-  readonly organisationUrl: string;
+  readonly orgUrl: ReadonlyURL;
   readonly userId: string;
   readonly force: boolean;
 }> =>
@@ -80,11 +81,15 @@ export default (
     async (args: {
       readonly clientId: string;
       readonly privateKey: string;
-      readonly organisationUrl: string;
+      readonly orgUrl: ReadonlyURL;
       readonly userId: string;
       readonly force: boolean;
     }) => {
-      const client = oktaManageClient({ ...args });
+      const client = oktaManageClient({
+        clientId: args.clientId,
+        privateKey: args.privateKey,
+        orgUrl: args.orgUrl,
+      });
       const service = new OktaUserService(client);
 
       const result = await deleteUser(service, args.userId, args.force)();
