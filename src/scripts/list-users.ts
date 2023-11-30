@@ -101,7 +101,6 @@ export default (
           default: false,
         });
     },
-    // Note: do not use spread operator on args as it is not type safe
     async (args: {
       readonly clientId: string;
       readonly privateKey: string;

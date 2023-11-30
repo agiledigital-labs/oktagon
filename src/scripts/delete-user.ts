@@ -78,7 +78,6 @@ export default (
         .boolean('force')
         .describe('force', 'force delete the user regardless of their status');
     },
-    // Note: do not use spread operator on args as it is not type safe
     async (args: {
       readonly clientId: string;
       readonly privateKey: string;

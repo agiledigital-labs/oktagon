@@ -56,7 +56,6 @@ export default (
     "Provides a list of all groups' ID's, email addresses, display names, and statuses.",
     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => yargs.argv,
-    // Note: do not use spread operator on args as it is not type safe
     async (args: {
       readonly clientId: string;
       readonly privateKey: string;

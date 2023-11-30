@@ -71,7 +71,6 @@ export default (
     "Pings the okta server to see if it's running and check user credentials along with organisation url",
     // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => yargs.argv,
-    // Note: do not use spread operator on args as it is not type safe
     async (args: {
       readonly clientId: string;
       readonly privateKey: string;
