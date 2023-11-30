@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
 /* eslint-disable functional/no-expression-statement */
 import yargs from 'yargs';
 import { parseUrl } from './scripts/services/okta-service';
@@ -72,7 +71,6 @@ const rootCommand = yargs
   .help();
 
 // End users of this tool will have to import their subcommands, and call it following example subcommand.
-// eslint-disable-next-line @typescript-eslint/no-unsafe-call
 activateUser(rootCommand);
 addUserToGroup(rootCommand);
 createUser(rootCommand);
