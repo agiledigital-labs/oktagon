@@ -54,8 +54,8 @@ export default (
     'list-groups',
     // eslint-disable-next-line quotes
     "Provides a list of all groups' ID's, email addresses, display names, and statuses.",
-    // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-    (yargs) => yargs.argv,
+    // eslint-disable-next-line functional/no-return-void, functional/functional-parameters, @typescript-eslint/no-empty-function
+    () => {},
     async (args: {
       readonly clientId: string;
       readonly privateKey: string;
