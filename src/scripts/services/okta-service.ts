@@ -1,20 +1,21 @@
 import * as okta from '@okta/okta-sdk-nodejs';
 import * as TE from 'fp-ts/lib/TaskEither';
+import * as E from 'fp-ts/lib/Either';
 import { pipe } from 'fp-ts/lib/function';
 import fetch from 'node-fetch';
 import { oktaAPIErrorSchema, urlSchema } from '../../schema';
-import { ReadonlyURL } from 'readonly-types';
+import { ReadonlyDate, ReadonlyURL } from 'readonly-types';
 
 /**
  * Parses a url to check whether it is valid
  * @param url - the url to parse
  * @returns a TaskEither that resolves to the url if it is valid, otherwise an error.
  */
-export const parseUrl = (url: string): TE.TaskEither<Error, ReadonlyURL> => {
+export const parseUrl = (url: string): E.Either<Error, ReadonlyURL> => {
   const parsedURL = urlSchema.safeParse(url);
   return parsedURL.success
-    ? TE.right(parsedURL.data)
-    : TE.left(
+    ? E.right(parsedURL.data)
+    : E.left(
         new Error(`Client error. Invalid URL [${url}].`, {
           cause: parsedURL.error.issues,
         })
@@ -71,6 +72,55 @@ export const validateCredentials = (
         }
       }
     })
+  );
+};
+
+/**
+ * Retrieves logs from the okta server. Unlike other service methods, this method does not filter the Okta specific types
+ * down into a domain specific one because the primary use case of this method is to provide flexible display to the end user
+ * in conjunction with another tool like `jq`.
+ *
+ * @param client the Okta client to use to retrieve the logs.
+ * @param limit the maximum number of logs to retrieve.
+ * @param query the query to filter the logs by (e.g. OIDC).
+ * @param filter the filter to filter the logs by (e.g. eventType eq "user.session.start").
+ * @param since the date from which to retrieve logs.
+ * @param until the date until which to retrieve logs.
+ * @returns the logs retrieved from the Okta server.
+ */
+export const retrieveLogs = (
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+  client: okta.Client,
+  limit: number,
+  query?: string,
+  filter?: string,
+  since?: ReadonlyDate,
+  until?: ReadonlyDate
+) => {
+  return pipe(
+    TE.tryCatch(
+      // eslint-disable-next-line functional/no-return-void
+      async () => {
+        // eslint-disable-next-line functional/no-let, functional/prefer-readonly-type
+        const logs: okta.LogEvent[] = [];
+        return await client
+          .getLogs({
+            limit,
+            q: query,
+            filter,
+            since: since?.toISOString(),
+            until: until?.toISOString(),
+          })
+          // eslint-disable-next-line functional/immutable-data, @typescript-eslint/prefer-readonly-parameter-types
+          .each((log) => logs.push(log))
+          // eslint-disable-next-line functional/functional-parameters
+          .then(() => logs);
+      },
+      (error) =>
+        new Error('Failed to retrieve logs.', {
+          cause: error,
+        })
+    )
   );
 };
 
