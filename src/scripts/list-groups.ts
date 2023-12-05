@@ -1,82 +1,119 @@
-import { Argv } from 'yargs';
-import { RootCommand } from '..';
+import { type Argv } from 'yargs';
+import { type RootCommand } from '..';
 
 import { table } from 'table';
-import {
-  OktaGroupService,
-  Group,
-  GroupService,
-} from './services/group-service';
+import { type Group, OktaGroupService } from './services/group-service';
 import { oktaReadOnlyClient } from './services/client-service';
 
-import * as TE from 'fp-ts/lib/TaskEither';
-import * as E from 'fp-ts/lib/Either';
-import { pipe } from 'fp-ts/lib/function';
-import * as Console from 'fp-ts/lib/Console';
-import { ReadonlyURL } from 'readonly-types';
+import * as TE from 'fp-ts/TaskEither';
+import * as O from 'fp-ts/Option';
+import { constant, pipe } from 'fp-ts/function';
+import { type ReadonlyURL } from 'readonly-types';
+import { handleTaskEither } from './services/error-service';
 
 /**
  * Tabulates group information for display.
  * @param groups groups to be tabulated.
  * @returns group information table formatted as a string.
  */
-const groupsTable = (groups: readonly Group[]): string => {
-  return table(
+const formatGroupsTable: (groups: readonly Group[]) => string = (
+  groups
+): string =>
+  table(
     [
       ['ID', 'Name', 'Type'],
-      ...groups.map((group: Group) => [group.id, group.name, group.type]),
+      ...groups.map(({ id, name, type }: Group) => [id, name, type]),
     ],
     {
-      // eslint-disable-next-line functional/functional-parameters
-      drawHorizontalLine: () => false,
-      // eslint-disable-next-line functional/functional-parameters
-      drawVerticalLine: () => false,
+      drawHorizontalLine: constant(false),
+      drawVerticalLine: constant(false),
     }
   );
-};
 
-const groups = (service: GroupService) =>
+/**
+ * User ID option.
+ *
+ * @example
+ * ```typescript
+ * const userIdOption: UserIdOption = O.some('00gddktac01w2dgmL5d7');
+ * ```
+ */
+export type UserIdOption = O.Option<string>;
+
+/**
+ * Returns a `TaskEither` that resolves to a groups table string or rejects with
+ * an error, given an Okta group service and a user ID option. The groups table
+ * is generated from the list of all groups if the user ID option is `O.none`.
+ * Otherwise, the groups table consists of the list of groups that the user is a
+ * member of.
+ *
+ * @param userIdOption An Okta user ID option.
+ * @param oktaGroupService An Okta group service.
+ * @returns A `TaskEither` that resolves to a string or rejects with an error.
+ */
+const getGroupsListTableString: (
+  userIdOption: UserIdOption
+) => (
+  oktaGroupService: Readonly<OktaGroupService>
+) => TE.TaskEither<Error, string> = (userIdOption) => (oktaGroupService) =>
   pipe(
-    service.listGroups(),
-    TE.map((groups) => groupsTable(groups)),
-    TE.chainFirstIOK(Console.info)
+    userIdOption,
+    O.match(oktaGroupService.listGroups, oktaGroupService.listUserGroups),
+    TE.map(formatGroupsTable)
   );
 
-export default (
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-  rootCommand: RootCommand
-): Argv<{
+/**
+ * Options passed to the `list-groups` command. Includes the client ID, private
+ * key, organisation URL, and user ID (optional).
+ *
+ * @example
+ * ```typescript
+ * const listGroupsOptions: ListGroupsOptions = {
+ *   clientId: '0oaddqhpa2nPVsxJX5d7',
+ *   privateKey: <private key>,
+ *   orgUrl: readonlyURL('https://dev-69870217.okta.com'),
+ *   userId: '00uddtlbyrKj9nyAX5d7',
+ * };
+ * ```
+ */
+type ListGroupsOptions = {
   readonly clientId: string;
   readonly privateKey: string;
   readonly orgUrl: ReadonlyURL;
-}> =>
+  readonly userId?: string;
+};
+
+/**
+ * Builds the `list-groups` command.
+ */
+// eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+export default (rootCommand: RootCommand): Argv<ListGroupsOptions> =>
   rootCommand.command(
     'list-groups',
     // eslint-disable-next-line quotes
-    "Provides a list of all groups' ID's, email addresses, display names, and statuses.",
-    // eslint-disable-next-line functional/no-return-void, functional/functional-parameters, @typescript-eslint/no-empty-function
-    () => {},
-    async (args: {
-      readonly clientId: string;
-      readonly privateKey: string;
-      readonly orgUrl: ReadonlyURL;
-    }) => {
-      const client = oktaReadOnlyClient(
-        {
-          clientId: args.clientId,
-          privateKey: args.privateKey,
-          orgUrl: args.orgUrl,
-        },
-        ['groups']
+    "Provides a list of all groups' IDs, email addresses, display names, and statuses. Allows a specification of a user ID to list only groups that the user is a member of.",
+    // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
+    (yargs) => {
+      // eslint-disable-next-line functional/no-expression-statement
+      yargs.positional('user', {
+        type: 'string',
+        alias: ['user-id'],
+        // eslint-disable-next-line quotes
+        describe: "The user's ID",
+      });
+    },
+    // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
+    (listGroupsOptions) => {
+      const userIdOption = O.fromNullable(listGroupsOptions.userId);
+      return pipe(
+        new OktaGroupService(
+          oktaReadOnlyClient(
+            listGroupsOptions,
+            O.match(constant(['groups']), constant(['users']))(userIdOption)
+          )
+        ),
+        getGroupsListTableString(userIdOption),
+        handleTaskEither
       );
-      const service = new OktaGroupService(client);
-
-      const result = await groups(service)();
-
-      // eslint-disable-next-line functional/no-conditional-statement
-      if (E.isLeft(result)) {
-        // eslint-disable-next-line functional/no-throw-statement
-        throw result.left;
-      }
     }
   );
