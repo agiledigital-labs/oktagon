@@ -9,6 +9,8 @@ import { retrieveLogs } from './services/okta-service';
 import * as okta from '@okta/okta-sdk-nodejs';
 import { ReadonlyDate, ReadonlyURL, readonlyDate } from 'readonly-types';
 import { table } from 'table';
+import * as duration from 'tinyduration';
+import { sub } from 'date-fns';
 
 // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
 const logsTable = (logs: readonly okta.LogEvent[]): string => {
@@ -54,6 +56,16 @@ const displayLogs = (
     ),
     TE.tapIO(Console.info)
   );
+
+const coercedDate = (s: string) => {
+  // eslint-disable-next-line functional/no-try-statement
+  try {
+    return readonlyDate(s);
+  } catch (error: unknown) {
+    // eslint-disable-next-line functional/no-throw-statement
+    throw new Error(`Invalid date [${s}].`, { cause: error });
+  }
+};
 
 export default (
   // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
@@ -103,14 +115,27 @@ export default (
           'The filter by which the logs will be filtered (e.g. eventType eq "user.session.start").',
       })
       .option('since', {
-        type: 'string',
         description: 'The start date of the logs to retrieve.',
-        coerce: (date: string) => readonlyDate(date),
+        coerce: (date: string) => coercedDate(date),
       })
       .option('until', {
-        type: 'string',
         description: 'The end date of the logs to retrieve.',
-        coerce: (date: string) => readonlyDate(date),
+        coerce: (date: string) => coercedDate(date),
+      })
+      .option('within', {
+        description:
+          'The start date of the logs to retrieve, expressed as a duration to be applied to now (e.g. 1d/P1D for 1 day, 2w/P2W for two weeks).',
+        conflicts: ['since', 'until'],
+        coerce: (s: string) => {
+          const durationWithP = s.startsWith('P') ? s : `P${s}`;
+          // eslint-disable-next-line functional/no-try-statement
+          try {
+            return duration.parse(durationWithP.toUpperCase());
+          } catch (error: unknown) {
+            // eslint-disable-next-line functional/no-throw-statement
+            throw new Error(`Invalid duration [${s}].`, { cause: error });
+          }
+        },
       });
   };
 
@@ -129,6 +154,7 @@ export default (
       readonly filter?: string;
       readonly since?: ReadonlyDate;
       readonly until?: ReadonlyDate;
+      readonly within?: duration.Duration;
     }) => {
       const { clientId, privateKey } = args;
       const client = oktaReadOnlyClient(
@@ -140,13 +166,21 @@ export default (
         ['logs']
       );
 
+      const effectiveSince =
+        args.since !== undefined
+          ? args.since
+          : args.within !== undefined
+          ? // eslint-disable-next-line no-restricted-globals
+            sub(new Date(), args.within)
+          : undefined;
+
       const result = await displayLogs(
         client,
         args.outputFormat,
         args.limit,
         args.query,
         args.filter,
-        args.since,
+        effectiveSince,
         args.until
       )();
       // eslint-disable-next-line functional/no-conditional-statement
