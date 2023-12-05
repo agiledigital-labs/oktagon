@@ -124,7 +124,7 @@ export default (
       })
       .option('within', {
         description:
-          'The start date of the logs to retrieve, expressed as a duration to be applied to now (e.g. 1d/P1D for 1 day, 2w/P2W for two weeks).',
+          'The start date of the logs to retrieve, expressed as an ISO8601 (https://en.wikipedia.org/wiki/ISO_8601#Durations) duration to be subtracted from now (e.g. 1d/P1D for 1 day, 2w/P2W for two weeks).',
         conflicts: ['since', 'until'],
         coerce: (s: string) => {
           const durationWithP = s.startsWith('P') ? s : `P${s}`;
