@@ -99,9 +99,8 @@ export const retrieveLogs = (
 ) => {
   return pipe(
     TE.tryCatch(
-      // eslint-disable-next-line functional/no-return-void
       async () => {
-        // eslint-disable-next-line functional/no-let, functional/prefer-readonly-type
+        // eslint-disable-next-line functional/prefer-readonly-type
         const logs: okta.LogEvent[] = [];
         return await client
           .getLogs({

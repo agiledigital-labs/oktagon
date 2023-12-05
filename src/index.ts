@@ -66,8 +66,7 @@ const rootCommand = yargs
   .help();
 
 /**
- * Dynamic type for global arguments. This needs to be it's own as we use a
- * require below to import all the commands
+ * Dynamic type for global arguments.
  */
 export type RootCommand = typeof rootCommand;
 

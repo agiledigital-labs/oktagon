@@ -36,6 +36,7 @@ delete-user             okta.users.manage
 list-groups             okta.groups.read
 add-user-to-group       okta.groups.manage, okta.users.manage
 remove-user-from-group  okta.groups.manage, okta.users.manage
+logs                    okta.logs.read
 ```
 
 Attemting to run a command without the required permissions will most likely result in a 400 or 403 HTTPS error.
