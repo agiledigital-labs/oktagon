@@ -20,9 +20,11 @@
     "@okta/okta-sdk-nodejs": "^6.5.0",
     "@types/node-fetch": "^2.6.2",
     "chalk-table": "^1.0.2",
+    "date-fns": "^2.30.0",
     "fp-ts": "^2.16.1",
     "generate-password": "^1.7.0",
     "table": "^6.8.0",
+    "tinyduration": "^3.3.0",
     "yargs": "^17.5.1",
     "zod": "^3.22.4"
   },
