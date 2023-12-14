@@ -1,7 +1,7 @@
 import * as okta from '@okta/okta-sdk-nodejs';
-import * as TE from 'fp-ts/lib/TaskEither';
-import * as O from 'fp-ts/lib/Option';
-import { pipe } from 'fp-ts/lib/function';
+import * as TE from 'fp-ts/TaskEither';
+import * as O from 'fp-ts/Option';
+import { constant, pipe } from 'fp-ts/function';
 
 /**
  * Subset of Group information provided by Okta. See okta.Group for further information on it's derived type.
@@ -127,14 +127,19 @@ export class OktaGroupService {
       )
     );
 
+  /**
+   * Returns a `TaskEither` that resolves to a list of all groups or rejects
+   * with an error.
+   *
+   * @returns A `TaskEither` that resolves to an array of groups or rejects with
+   * an error.
+   */
   // eslint-disable-next-line functional/functional-parameters
-  readonly listGroups = (): TE.TaskEither<Error, readonly Group[]> => {
-    // We need to populate groups with all of the client data so it can be
-    // returned. Okta's listGroups() function returns a custom collection that
-    // does not allow for any form of mapping, so array mutation is needed.
-
-    return TE.tryCatch(
+  readonly listGroups: () => TE.TaskEither<Error, readonly Group[]> = () =>
+    TE.tryCatch(
       () => {
+        /* We need to populate groups with all of the client data so it can be
+        returned. */
         // eslint-disable-next-line functional/prefer-readonly-type
         const groups: Group[] = [];
 
@@ -142,15 +147,11 @@ export class OktaGroupService {
           // eslint-disable-next-line functional/no-this-expression
           this.client
             .listGroups()
-            // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
-            .each((oktaGroup) => {
-              // eslint-disable-next-line functional/immutable-data
-              return groups.push(oktaGroupAsGroup(oktaGroup));
-            })
-            // eslint-disable-next-line functional/functional-parameters
-            .then(() => {
-              return groups;
-            })
+            /* Okta's `listGroups` method returns a custom collection that does
+            not allow for any form of mapping, so array mutation is needed. */
+            // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types, functional/immutable-data
+            .each((oktaGroup) => groups.push(oktaGroupAsGroup(oktaGroup)))
+            .then(constant(groups))
         );
       },
       (error: unknown) =>
@@ -158,7 +159,42 @@ export class OktaGroupService {
           cause: error,
         })
     );
-  };
+
+  /**
+   * Returns a `TaskEither` that resolves to a list of groups that the user with
+   * the given user ID is a member of or rejects with an error.
+   *
+   * @param userId The user ID of the user whose groups are to be listed.
+   * @returns A `TaskEither` that resolves to an array of groups or rejects with
+   * an error.
+   */
+  readonly listUserGroups: (
+    userId: string
+  ) => TE.TaskEither<Error, readonly Group[]> = (userId) =>
+    TE.tryCatch(
+      () => {
+        /* We need to populate groups with all of the client data so it can be
+        returned. */
+        // eslint-disable-next-line functional/prefer-readonly-type
+        const groups: Group[] = [];
+
+        return (
+          // eslint-disable-next-line functional/no-this-expression
+          this.client
+            .listUserGroups(userId)
+            /* Okta's `listUserGroups` method returns a custom collection that
+            does not allow for any form of mapping, so array mutation is needed.
+            */
+            // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types, functional/immutable-data
+            .each((oktaGroup) => groups.push(oktaGroupAsGroup(oktaGroup)))
+            .then(constant(groups))
+        );
+      },
+      (error: unknown) =>
+        new Error('Failed to list user groups.', {
+          cause: error,
+        })
+    );
 }
 
 export type GroupService = {
@@ -166,4 +202,5 @@ export type GroupService = {
   readonly addUserToGroup: OktaGroupService['addUserToGroup'];
   readonly removeUserFromGroup: OktaGroupService['removeUserFromGroup'];
   readonly listGroups: OktaGroupService['listGroups'];
+  readonly listUserGroups: OktaGroupService['listUserGroups'];
 };

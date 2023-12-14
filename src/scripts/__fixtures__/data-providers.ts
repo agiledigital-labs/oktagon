@@ -43,6 +43,7 @@ export const baseUserService = (): UserService => ({
 export const baseGroupService = (): GroupService => ({
   getGroup: returnLeftTE,
   listGroups: returnLeftTE,
+  listUserGroups: returnLeftTE,
   addUserToGroup: returnLeftTE,
   removeUserFromGroup: returnLeftTE,
 });
