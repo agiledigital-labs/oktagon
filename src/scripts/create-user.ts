@@ -63,21 +63,18 @@ export default (
         .option('email', {
           type: 'string',
           alias: ['login'],
-          // eslint-disable-next-line quotes
           describe: "The new user's login/email",
           demandOption: true,
         })
         .option('fname', {
           type: 'string',
           alias: ['first-name'],
-          // eslint-disable-next-line quotes
           describe: "The new user's first name",
           demandOption: true,
         })
         .option('lname', {
           type: 'string',
           alias: ['last-name'],
-          // eslint-disable-next-line quotes
           describe: "The new user's last name",
           demandOption: true,
         });

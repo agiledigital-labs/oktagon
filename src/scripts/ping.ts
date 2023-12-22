@@ -67,7 +67,6 @@ export default (
 }> =>
   rootCommand.command(
     'ping',
-    // eslint-disable-next-line quotes
     "Pings the okta server to see if it's running and check user credentials along with organisation url",
     // eslint-disable-next-line functional/no-return-void, functional/functional-parameters, @typescript-eslint/no-empty-function
     () => {},

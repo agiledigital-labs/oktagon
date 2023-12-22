@@ -90,7 +90,6 @@ export default (
         .positional('group', {
           type: 'string',
           alias: ['group-id'],
-          // eslint-disable-next-line quotes
           describe: "The group's ID",
         })
         .option('all', {
