@@ -76,13 +76,11 @@ export default (
         .option('user-id', {
           type: 'string',
           alias: ['user-login', 'user-email', 'user'],
-          // eslint-disable-next-line quotes
           describe: "The user's ID, login, or email address",
           demandOption: true,
         })
         .option('group', {
           type: 'string',
-          // eslint-disable-next-line quotes
           describe: "The group's ID",
           demandOption: true,
         });

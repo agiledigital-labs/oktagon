@@ -90,7 +90,6 @@ type ListGroupsOptions = {
 export default (rootCommand: RootCommand): Argv<ListGroupsOptions> =>
   rootCommand.command(
     'list-groups',
-    // eslint-disable-next-line quotes
     "Provides a list of all groups' IDs, email addresses, display names, and statuses. Allows a specification of a user ID to list only groups that the user is a member of.",
     // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => {
@@ -98,7 +97,6 @@ export default (rootCommand: RootCommand): Argv<ListGroupsOptions> =>
       yargs.positional('user', {
         type: 'string',
         alias: ['user-id'],
-        // eslint-disable-next-line quotes
         describe: "The user's ID",
       });
     },
