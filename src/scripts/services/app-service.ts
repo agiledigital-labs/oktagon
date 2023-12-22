@@ -45,7 +45,9 @@ export type App = {
  * @returns The converted App.
  */
 export const oktaApplicationAsApp: (
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   oktaApplication: okta.Application
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
 ) => App = ({ id, name, label, status, lastUpdated, created }) => ({
   id,
   name,
@@ -68,9 +70,10 @@ export const oktaApplicationAsApp: (
  */
 const convertOktaCollectionToArray: <A extends Resource, B>(
   oktaResourceAsCustomResource: (a: A) => B
-  // eslint-disable-next-line functional/prefer-readonly-type
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
 ) => (oktaCollection: okta.Collection<A>) => Promise<readonly B[]> =
   <A extends Resource, B>(oktaResourceAsCustomResource: (a: A) => B) =>
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   (oktaCollection: okta.Collection<A>) => {
     /* We need to populate resources with all of the client data so it can be
     returned. */
@@ -97,7 +100,9 @@ export type OktaAppService = {
   readonly listUserApps: ListUserApps;
 };
 
+// eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
 export const createOktaAppService: (client: okta.Client) => OktaAppService = (
+  // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
   client
 ) => ({
   /**

@@ -75,12 +75,13 @@ type ListAppsOptions = {
 /**
  * Builds the `list-apps` command.
  */
+// eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
 export default (rootCommand: RootCommand): Argv<ListAppsOptions> =>
   rootCommand.command(
     'list-apps',
     // eslint-disable-next-line quotes
     "Provides a list of all apps' IDs, names, labels, statuses, last updated dates, and created dates. Allows a specification of a user ID to list only apps that the user has been assigned.",
-    // eslint-disable-next-line functional/no-return-void
+    // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
     (yargs) => {
       // eslint-disable-next-line functional/no-expression-statement
       yargs.positional('user', {
@@ -90,7 +91,7 @@ export default (rootCommand: RootCommand): Argv<ListAppsOptions> =>
         describe: "The user's ID",
       });
     },
-    // eslint-disable-next-line functional/no-return-void
+    // eslint-disable-next-line functional/no-return-void, @typescript-eslint/prefer-readonly-parameter-types
     (listAppsOptions) => {
       const userIdOption = O.fromNullable(listAppsOptions.userId);
       return pipe(
