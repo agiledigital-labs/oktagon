@@ -3,7 +3,10 @@ import { type RootCommand } from '..';
 
 import { table } from 'table';
 import { type Group, OktaGroupService } from './services/group-service';
-import { oktaReadOnlyClient } from './services/client-service';
+import {
+  type ResourceType,
+  oktaReadOnlyClient,
+} from './services/client-service';
 
 import * as TE from 'fp-ts/TaskEither';
 import * as O from 'fp-ts/Option';
@@ -109,7 +112,10 @@ export default (rootCommand: RootCommand): Argv<ListGroupsOptions> =>
         new OktaGroupService(
           oktaReadOnlyClient(
             listGroupsOptions,
-            O.match(constant(['groups']), constant(['users']))(userIdOption)
+            O.match<string, readonly ResourceType[]>(
+              constant(['groups']),
+              constant(['users'])
+            )(userIdOption)
           )
         ),
         getGroupsListTableString(userIdOption),
