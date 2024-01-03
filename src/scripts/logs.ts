@@ -10,7 +10,7 @@ import * as okta from '@okta/okta-sdk-nodejs';
 import { ReadonlyDate, ReadonlyURL, readonlyDate } from 'readonly-types';
 import { table } from 'table';
 import * as duration from 'tinyduration';
-import { sub } from 'date-fns';
+import { sub, isAfter } from 'date-fns';
 
 // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
 const logsTable = (logs: readonly okta.LogEvent[]): string => {
@@ -87,56 +87,81 @@ export default (
       readonly limit: number;
     }
   > => {
-    return yargs
-      .option('output-format', {
-        alias: 'o',
-        type: 'string',
-        choices: ['json', 'table'] as const,
-        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-        default: 'table' as 'table' | 'json',
-        description: 'The format to output the logs in.',
-      })
-      .option('limit', {
-        alias: 'l',
-        type: 'number',
-        default: 10,
-        description: 'The number of logs to retrieve.',
-      })
-      .option('query', {
-        alias: 'q',
-        type: 'string',
-        description:
-          'The query by which the logs will be filtered (e.g. OIDC).',
-      })
-      .option('filter', {
-        alias: 'f',
-        type: 'string',
-        description:
-          'The filter by which the logs will be filtered (e.g. eventType eq "user.session.start").',
-      })
-      .option('since', {
-        description: 'The start date of the logs to retrieve.',
-        coerce: (date: string) => coercedDate(date),
-      })
-      .option('until', {
-        description: 'The end date of the logs to retrieve.',
-        coerce: (date: string) => coercedDate(date),
-      })
-      .option('within', {
-        description:
-          'The start date of the logs to retrieve, expressed as an ISO8601 (https://en.wikipedia.org/wiki/ISO_8601#Durations) duration to be subtracted from now (e.g. 1d/P1D for 1 day, 2w/P2W for two weeks).',
-        conflicts: ['since', 'until'],
-        coerce: (s: string) => {
-          const durationWithP = s.startsWith('P') ? s : `P${s}`;
-          // eslint-disable-next-line functional/no-try-statement
-          try {
-            return duration.parse(durationWithP.toUpperCase());
-          } catch (error: unknown) {
-            // eslint-disable-next-line functional/no-throw-statement
-            throw new Error(`Invalid duration [${s}].`, { cause: error });
+    return (
+      yargs
+        .option('output-format', {
+          alias: 'o',
+          type: 'string',
+          choices: ['json', 'table'] as const,
+          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+          default: 'table' as 'table' | 'json',
+          description: 'The format to output the logs in.',
+        })
+        .option('limit', {
+          alias: 'l',
+          type: 'number',
+          default: 10,
+          description: 'The number of logs to retrieve.',
+        })
+        .option('query', {
+          alias: 'q',
+          type: 'string',
+          description:
+            'The query by which the logs will be filtered (e.g. OIDC).',
+        })
+        .option('filter', {
+          alias: 'f',
+          type: 'string',
+          description:
+            'The filter by which the logs will be filtered (e.g. eventType eq "user.session.start").',
+        })
+        .option('since', {
+          description: 'The start date of the logs to retrieve.',
+          coerce: (date: string) => coercedDate(date),
+        })
+        .option('until', {
+          description: 'The end date of the logs to retrieve.',
+          coerce: (date: string) => coercedDate(date),
+        })
+        .option('within', {
+          description:
+            'The start date of the logs to retrieve, expressed as an ISO8601 (https://en.wikipedia.org/wiki/ISO_8601#Durations) duration to be subtracted from now (e.g. 1d/P1D for 1 day, 2w/P2W for two weeks).',
+          conflicts: ['since', 'until'],
+          coerce: (s: string) => {
+            const durationWithP = s.startsWith('P') ? s : `P${s}`;
+            // eslint-disable-next-line functional/no-try-statement
+            try {
+              return duration.parse(durationWithP.toUpperCase());
+            } catch (error: unknown) {
+              // eslint-disable-next-line functional/no-throw-statement
+              throw new Error(`Invalid duration [${s}].`, { cause: error });
+            }
+          },
+        })
+        // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
+        .check((argv) => {
+          // eslint-disable-next-line functional/no-expression-statement
+          console.info(`argv [${JSON.stringify(argv, null, 2)}]`);
+          // eslint-disable-next-line functional/no-conditional-statement, sonarjs/no-collapsible-if
+          if (argv.since !== undefined && argv.until !== undefined) {
+            // eslint-disable-next-line functional/no-conditional-statement
+            if (
+              isAfter(
+                // eslint-disable-next-line no-restricted-globals
+                new Date(argv.since.getTime()),
+                // eslint-disable-next-line no-restricted-globals
+                new Date(argv.until.getTime())
+              )
+            ) {
+              // eslint-disable-next-line functional/no-throw-statement
+              throw new Error(
+                `Invalid date range, since [${argv.since.toISOString()}] is after until [${argv.until.toISOString()}] but must be before.`
+              );
+            }
           }
-        },
-      });
+          return true;
+        })
+    );
   };
 
   // eslint-disable-next-line sonarjs/prefer-immediate-return
