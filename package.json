@@ -34,7 +34,7 @@
     "@stryker-mutator/jest-runner": "^8.0.0",
     "@stryker-mutator/typescript-checker": "^8.0.0",
     "@types/clear": "0.1.2",
-    "@types/clui": "0.3.1",
+    "@types/clui": "0.3.5",
     "@types/jest": "28.1.8",
     "@types/node": "18.7.13",
     "@types/yargs": "17.0.11",
